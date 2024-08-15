@@ -23,9 +23,9 @@ var (
 type WarehouseData struct {
 	ChatID     int64
 	FromDate   time.Time
-	toDate     time.Time
+	ToDate     time.Time
 	Warehouse  string
-	CoeffLimit uint8
+	CoeffLimit string
 	SupplyType string
 	IsActive   bool
 }
@@ -75,7 +75,7 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]WarehouseD
 	warehouses := []WarehouseData{}
 	for rows.Next() {
 		warehouse := WarehouseData{}
-		err := rows.Scan(&warehouse.FromDate, &warehouse.toDate, &warehouse.Warehouse, &warehouse.CoeffLimit, &warehouse.SupplyType, &warehouse.IsActive)
+		err := rows.Scan(&warehouse.FromDate, &warehouse.ToDate, &warehouse.Warehouse, &warehouse.CoeffLimit, &warehouse.SupplyType, &warehouse.IsActive)
 		if err != nil {
 			return nil, fmt.Errorf("unable to scan row: %w", err)
 		}
@@ -87,15 +87,14 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]WarehouseD
 }
 
 func (pg *Postgres) InsertQuery(ctx context.Context, params WarehouseData) error {
-	query := `INSERT INTO supplies (chat_id, from_date, to_date, Warehouse, coeff_limit, supply_type, is_active) VALUES (@ChatID, @FromDate, @toDate, @Warehouse, @CoeffLimit, @SupplyType, @IsActive)`
+	query := `INSERT INTO supplies (chat_id, from_date, to_date, Warehouse, coeff_limit, supply_type) VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType)`
 	args := pgx.NamedArgs{
 		"ChatID":     params.ChatID,
 		"FromDate":   params.FromDate,
-		"toDate":     params.toDate,
+		"ToDate":     params.ToDate,
 		"Warehouse":  params.Warehouse,
 		"CoeffLimit": params.CoeffLimit,
 		"SupplyType": params.SupplyType,
-		"IsActive":   params.IsActive,
 	}
 
 	_, err := pg.db.Exec(ctx, query, args)
