@@ -1,0 +1,192 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	db "wb_bot/db"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
+)
+
+var prevCommands = map[int64]BotCommandNameType{}
+
+// var prevCMutex sync.RWMutex
+
+type BotCommandNameType uint8
+
+const (
+	BotCommandNameTypeUnknown = iota
+	BotCommandNameTypeInputDate
+	BotCommandNameTypeInputWarehouse
+	BotCommandNameTypeInputCoeffLimit
+	BotCommandNameTypeInputSupplyType
+)
+
+var botCommands = map[uint8]string{
+	BotCommandNameTypeInputDate:       "Введите дату отслеживания в следующем формате: \"дд.мм.гггг-дд.мм.гггг\"",
+	BotCommandNameTypeInputWarehouse:  "Выберите склад, который хотите отслеживать",
+	BotCommandNameTypeInputCoeffLimit: "Введите лимит коэффициента",
+	BotCommandNameTypeInputSupplyType: "Выберите тип поставки",
+}
+
+var trackings = map[int64]db.WarehouseData{}
+
+type User struct {
+	Name    string
+	Surname string
+}
+
+var users = map[int64]User{}
+
+// var usersMutex sync.RWMutexs
+
+// var connString = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+// var connString = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=verify-ca", user, password, host, port, dbname)
+
+// var connString = fmt.Sprintf(
+//
+//	"postgresql://%s:%s@%s:%s/%s",
+//	"postgres",
+//	"pass123",
+//	"localhost",
+//	"5432",
+//	"wb_bot_db",
+//
+// )
+
+func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("godotenv.Load: %s", err)
+	}
+
+	var (
+		host     = os.Getenv("HOST")
+		port     = os.Getenv("PORT")
+		user     = os.Getenv("USER")
+		password = os.Getenv("PASSWORD")
+		dbname   = os.Getenv("DBNAME")
+	)
+
+	var connString = fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s",
+		user,
+		password,
+		host,
+		port,
+		dbname,
+	)
+
+	dbpool, err := db.NewPG(context.Background(), connString)
+	if err != nil {
+		log.Fatalf("db.NewPG: %s", err)
+	}
+
+	defer dbpool.Close()
+
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
+	if err != nil {
+		log.Fatalf("tgbotapi.NewBotAPI: %s", err)
+	}
+
+	updateConfig := tgbotapi.NewUpdate(0)
+
+	updateConfig.Timeout = 30
+
+	updates := bot.GetUpdatesChan(updateConfig)
+
+	for update := range updates {
+		if update.Message == nil {
+			continue
+		}
+
+		switch update.Message.Text {
+		case "/start":
+			// prevCMutex.Lock()
+
+			prevCommands[update.Message.Chat.ID] = BotCommandNameTypeInputDate
+			// prevCMutex.Unlock()
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, botCommands[BotCommandNameTypeInputDate])
+			if _, err := bot.Send(msg); err != nil {
+				fmt.Printf("bot.Send: %s\n", err.Error())
+			}
+		default:
+			var msg tgbotapi.MessageConfig
+
+			// prevCMutex.RLock()
+			prevCommand, ok := prevCommands[update.Message.Chat.ID]
+			// prevCMutex.RUnlock()
+
+			if !ok {
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "I don't know this command")
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+
+				break
+			}
+
+			switch prevCommand {
+			case BotCommandNameTypeInputDate:
+				// prevCMutex.Lock()
+				prevCommands[update.Message.Chat.ID] = BotCommandNameTypeInputWarehouse
+				// prevCMutex.Unlock()
+
+				// usersMutex.Lock()
+				trackings[update.Message.Chat.ID] = db.WarehouseData{ChatID: update.Message.Chat.ID}
+				// usersMutex.Unlock()
+
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, botCommands[BotCommandNameTypeInputDate])
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+			case BotCommandNameTypeInputWarehouse:
+				// usersMutex.Lock()
+				// tmpUser := users[update.Message.Chat.ID]
+				// tmpUser.Surname = update.Message.Text
+				// users[update.Message.Chat.ID] = tmpUser
+
+				tmpTracking := trackings[update.Message.Chat.ID]
+				tmpTracking.Warehouse = update.Message.Text
+				trackings[update.Message.Chat.ID] = tmpTracking
+				// usersMutex.Unlock()
+
+				// prevCMutex.Lock()
+				prevCommands[update.Message.Chat.ID] = BotCommandNameTypeUnknown
+				// prevCMutex.Unlock()
+
+				// err = dbpool.InsertQuery(context.Background(), trackings[update.Message.Chat.ID])
+				// if err != nil {
+				// 	fmt.Printf("dbpool.InsertQuery: %s\n", err.Error())
+				// }
+
+				// test, err := dbpool.SelectQuery(context.Background(), update.Message.Chat.ID)
+				// if err != nil {
+				// 	fmt.Printf("dbpool.SelectQuery: %s\n", err.Error())
+				// }
+
+				// fmt.Println(test)
+
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Thank you for info about you)")
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+			default:
+				// usersMutex.RLock()
+				user := users[update.Message.Chat.ID]
+				// usersMutex.RUnlock()
+
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Name: %s\nSurname: %s", user.Name, user.Surname))
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+			}
+		}
+
+	}
+
+	bot.Debug = true
+}
