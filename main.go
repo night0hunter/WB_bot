@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	db "wb_bot/db"
@@ -145,7 +146,7 @@ func main() {
 			case BotCommandNameTypeInputDate:
 				dateFrom, dateTo, err := parseDate(update.Message.Text)
 				if err != nil {
-					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверный формат даты")
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверный формат даты, попробуйте ещё раз")
 					if _, err := bot.Send(msg); err != nil {
 						fmt.Printf("bot.Send: %s\n", err.Error())
 					}
@@ -193,6 +194,16 @@ func main() {
 				}
 
 			case BotCommandNameTypeInputCoeffLimit:
+				err := parseCoeffLimit(update.Message.Text)
+				if err != nil {
+					msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Неверный формат коэффициента, попробуйте ещё раз")
+					if _, err := bot.Send(msg); err != nil {
+						fmt.Printf("bot.Send: %s\n", err.Error())
+					}
+
+					continue
+				}
+
 				tmpTracking := trackings[update.Message.Chat.ID]
 				tmpTracking.CoeffLimit = update.Message.Text
 				trackings[update.Message.Chat.ID] = tmpTracking
@@ -237,13 +248,22 @@ func parseDate(dateString string) (time.Time, time.Time, error) {
 
 	dateFrom, err := time.ParseInLocation(TimeFormat, datesRaw[0], moscowLocation)
 	if err != nil {
-		return time.Time{}, time.Time{}, errors.Wrap(err, "dateFrom: time.Parse")
+		return time.Time{}, time.Time{}, errors.Wrap(err, "dateFrom: time.ParseInLocation")
 	}
 
 	dateTo, err := time.ParseInLocation(TimeFormat, datesRaw[1], moscowLocation)
 	if err != nil {
-		return time.Time{}, time.Time{}, errors.Wrap(err, "dateTo: time.Parse")
+		return time.Time{}, time.Time{}, errors.Wrap(err, "dateTo: time.ParseInLocation")
 	}
 
 	return dateFrom, dateTo, nil
+}
+
+func parseCoeffLimit(coeff string) error {
+	_, err := strconv.Atoi(coeff)
+	if err != nil {
+		return errors.Wrap(err, "coeffLimit: strconv.Atoi")
+	}
+
+	return nil
 }
