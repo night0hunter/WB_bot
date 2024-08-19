@@ -116,7 +116,7 @@ func main() {
 		}
 
 		switch update.Message.Text {
-		case "/start":
+		case "/add":
 			// prevCMutex.Lock()
 
 			prevCommands[update.Message.Chat.ID] = BotCommandNameTypeInputDate
@@ -126,6 +126,40 @@ func main() {
 			if _, err := bot.Send(msg); err != nil {
 				fmt.Printf("bot.Send: %s\n", err.Error())
 			}
+		case "/check":
+			var warehouses []db.WarehouseData
+			var msg tgbotapi.MessageConfig
+
+			warehouses, err = dbpool.SelectQuery(context.Background(), update.Message.Chat.ID)
+			if err != nil {
+				fmt.Printf("dbpool.SelectQuery: %s\n", err.Error())
+			}
+
+			if len(warehouses) == 0 {
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "На данный момент вы не отслеживаете ни одного склада.\nЧтобы добавить, введите /add")
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+
+				continue
+			}
+
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Список отслеживаемых складов:")
+			if _, err := bot.Send(msg); err != nil {
+				fmt.Printf("bot.Send: %s\n", err.Error())
+			}
+
+			for _, wh := range warehouses {
+				isActive := "Активно"
+				if !wh.IsActive {
+					isActive = "Неактивно"
+				}
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Склад: %s\nДата начала отслеживания: %s\nДата окончания отслеживания: %s\nЛимит коэффициента: x%s и меньше\nТип поставки: %s\nАктивно/Неактивно: %s", wh.Warehouse, wh.FromDate.Format(TimeFormat), wh.ToDate.Format(TimeFormat), wh.CoeffLimit, wh.SupplyType, isActive))
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+			}
+
 		default:
 			var msg tgbotapi.MessageConfig
 
@@ -224,7 +258,7 @@ func main() {
 					fmt.Printf("dbpool.InsertQuery: %s\n", err.Error())
 				}
 
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("ChatID: %d\nDateFrom: %s\nDateTo: %s\nWarehouse: %s\nCoeffLim: %s\nSupplyType: %s\nIsActive: %t", trackings[update.Message.Chat.ID].ChatID, trackings[update.Message.Chat.ID].FromDate, trackings[update.Message.Chat.ID].ToDate, trackings[update.Message.Chat.ID].Warehouse, trackings[update.Message.Chat.ID].CoeffLimit, trackings[update.Message.Chat.ID].SupplyType, trackings[update.Message.Chat.ID].IsActive))
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Склад успешно добавлен!")
 				if _, err := bot.Send(msg); err != nil {
 					fmt.Printf("bot.Send: %s\n", err.Error())
 				}
