@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -29,37 +30,51 @@ var prevCommands = map[int64]BotCommandNameType{}
 type BotCommandNameType uint8
 
 const (
-	BotCommandNameTypeUnknown = iota
+	BotCommandNameTypeUnknown BotCommandNameType = iota
 	BotCommandNameTypeInputDate
 	BotCommandNameTypeInputWarehouse
 	BotCommandNameTypeInputCoeffLimit
 	BotCommandNameTypeInputSupplyType
 )
 
-var botCommands = map[uint8]string{
+var botCommands = map[BotCommandNameType]string{
 	BotCommandNameTypeInputDate:       "Введите дату отслеживания в следующем формате: \"дд.мм.гггг-дд.мм.гггг\"",
 	BotCommandNameTypeInputWarehouse:  "Выберите склад, который хотите отслеживать",
-	BotCommandNameTypeInputCoeffLimit: "Введите лимит коэффициента",
+	BotCommandNameTypeInputCoeffLimit: "Выберите лимит коэффициента или введите свой",
 	BotCommandNameTypeInputSupplyType: "Выберите тип поставки",
 }
 
 var trackings = map[int64]db.WarehouseData{}
 
+type ButtonType uint8
+
+const (
+	ButtonTypeCoeffLimit ButtonType = iota + 1
+)
+
+type ButtonData struct {
+	Type  ButtonType
+	Value string
+}
+
+type Button struct {
+	Data ButtonData
+	Text string
+}
+
 // var users = map[int64]User{}
 
 // var usersMutex sync.RWMutexs
 
-// var connString = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=verify-ca", user, password, host, port, dbname)
+// var connString = fmt.Sprintf(
 
-var connString = fmt.Sprintf(
-
-	"postgresql://%s:%s@%s:%s/%s",
-	"postgres",
-	"pass123",
-	"localhost",
-	"5432",
-	"wb_bot_db",
-)
+// 	"postgresql://%s:%s@%s:%s/%s",
+// 	"postgres",
+// 	"pass123",
+// 	"localhost",
+// 	"5432",
+// 	"wb_bot_db",
+// )
 
 func init() {
 	var err error
@@ -70,27 +85,26 @@ func init() {
 }
 
 func main() {
-	fmt.Println(os.Getenv("TELEGRAM_APITOKEN"))
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("godotenv.Load: %s", err)
 	}
 
-	// var (
-	// 	host     = os.Getenv("HOST")
-	// 	port     = os.Getenv("PORT")
-	// 	user     = os.Getenv("USER")
-	// 	password = os.Getenv("PASSWORD")
-	// 	dbname   = os.Getenv("DBNAME")
-	// )
+	var (
+		host     = os.Getenv("HOST")
+		port     = os.Getenv("PORT")
+		user     = os.Getenv("USER")
+		password = os.Getenv("PASSWORD")
+		dbname   = os.Getenv("DBNAME")
+	)
 
-	// var connString = fmt.Sprintf(
-	// 	"postgresql://%s:%s@%s:%s/%s",
-	// 	user,
-	// 	password,
-	// 	host,
-	// 	port,
-	// 	dbname,
-	// )
+	var connString = fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s",
+		user,
+		password,
+		host,
+		port,
+		dbname,
+	)
 
 	dbpool, err := db.NewPG(context.Background(), connString)
 	if err != nil {
@@ -104,6 +118,8 @@ func main() {
 		log.Fatalf("tgbotapi.NewBotAPI: %s", err)
 	}
 
+	fmt.Printf("Bot has been started on port %s ...", port)
+
 	updateConfig := tgbotapi.NewUpdate(0)
 
 	updateConfig.Timeout = 30
@@ -111,7 +127,37 @@ func main() {
 	updates := bot.GetUpdatesChan(updateConfig)
 
 	for update := range updates {
-		if update.Message == nil {
+		if update.Message == nil && update.CallbackQuery == nil {
+			continue
+		}
+
+		if update.CallbackQuery != nil {
+			var buttonData ButtonData
+
+			err := json.Unmarshal([]byte(update.CallbackQuery.Data), &buttonData)
+			if err != nil {
+				fmt.Printf("json.unMarshal: %s\n", err.Error())
+			}
+
+			switch buttonData.Type {
+			case 1:
+				prevCommands[update.CallbackQuery.Message.Chat.ID] = BotCommandNameTypeInputSupplyType
+
+				tmpTracking := trackings[update.CallbackQuery.Message.Chat.ID]
+				tmpTracking.CoeffLimit = buttonData.Value
+				trackings[update.CallbackQuery.Message.Chat.ID] = tmpTracking
+
+				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Вы выбрали %sx", buttonData.Value))
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+
+				msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, botCommands[BotCommandNameTypeInputSupplyType])
+				if _, err := bot.Send(msg); err != nil {
+					fmt.Printf("bot.Send: %s\n", err.Error())
+				}
+			}
+
 			continue
 		}
 
@@ -154,7 +200,7 @@ func main() {
 				if !wh.IsActive {
 					isActive = "Неактивно"
 				}
-				msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Склад: %s\nДата начала отслеживания: %s\nДата окончания отслеживания: %s\nЛимит коэффициента: x%s и меньше\nТип поставки: %s\nАктивно/Неактивно: %s", wh.Warehouse, wh.FromDate.Format(TimeFormat), wh.ToDate.Format(TimeFormat), wh.CoeffLimit, wh.SupplyType, isActive))
+				msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%s и меньше\nТип поставки: %s\nАктивно/Неактивно: %s", wh.Warehouse, wh.FromDate.Format(TimeFormat), wh.ToDate.Format(TimeFormat), wh.CoeffLimit, wh.SupplyType, isActive))
 				if _, err := bot.Send(msg); err != nil {
 					fmt.Printf("bot.Send: %s\n", err.Error())
 				}
@@ -223,9 +269,49 @@ func main() {
 				// prevCMutex.Unlock()
 
 				msg = tgbotapi.NewMessage(update.Message.Chat.ID, botCommands[BotCommandNameTypeInputCoeffLimit])
+				tmpMarkup, err := generateKeyboard([]Button{
+					{
+						Data: ButtonData{
+							Type:  ButtonTypeCoeffLimit,
+							Value: "0",
+						},
+						Text: "Бесплатно",
+					},
+					{
+						Data: ButtonData{
+							Type:  ButtonTypeCoeffLimit,
+							Value: "1",
+						},
+						Text: "1x",
+					},
+					{
+						Data: ButtonData{
+							Type:  ButtonTypeCoeffLimit,
+							Value: "2",
+						},
+						Text: "2x",
+					},
+					{
+						Data: ButtonData{
+							Type:  ButtonTypeCoeffLimit,
+							Value: "3",
+						},
+						Text: "3x",
+					},
+				}...)
+				if err != nil {
+					fmt.Printf("generateKeyboard: %s\n", err.Error())
+				}
+
+				msg.ReplyMarkup = tmpMarkup
 				if _, err := bot.Send(msg); err != nil {
 					fmt.Printf("bot.Send: %s\n", err.Error())
 				}
+
+				// msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
+				// if _, err := bot.Send(msg); err != nil {
+				// 	fmt.Printf("bot.Send: %s\n", err.Error())
+				// }
 
 			case BotCommandNameTypeInputCoeffLimit:
 				err := parseCoeffLimit(update.Message.Text)
@@ -248,6 +334,7 @@ func main() {
 				if _, err := bot.Send(msg); err != nil {
 					fmt.Printf("bot.Send: %s\n", err.Error())
 				}
+
 			case BotCommandNameTypeInputSupplyType:
 				tmpTracking := trackings[update.Message.Chat.ID]
 				tmpTracking.SupplyType = update.Message.Text
@@ -300,4 +387,21 @@ func parseCoeffLimit(coeff string) error {
 	}
 
 	return nil
+}
+
+func generateKeyboard(buttons ...Button) (tgbotapi.InlineKeyboardMarkup, error) {
+	keyboardButtons := make([]tgbotapi.InlineKeyboardButton, 0, len(buttons))
+
+	for _, button := range buttons {
+		jsonData, err := json.Marshal(button.Data)
+		if err != nil {
+			return tgbotapi.InlineKeyboardMarkup{}, errors.Wrap(err, "json.Marshal")
+		}
+
+		keyboardButtons = append(keyboardButtons, tgbotapi.NewInlineKeyboardButtonData(button.Text, string(jsonData)))
+	}
+
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(keyboardButtons...),
+	), nil
 }
