@@ -13,6 +13,9 @@ import (
 const (
 	TimeFormat         = "02.01.2006"
 	MoscowLocationName = "Europe/Moscow"
+
+	active   = "Активно"
+	inactive = "Неактивно"
 )
 
 var moscowLocation *time.Location
@@ -52,4 +55,12 @@ func ParseCoeffLimit(coeff string) (int, error) {
 	}
 
 	return parsed, nil
+}
+
+func BoolToActiveRU(input bool) string {
+	if input {
+		return active
+	}
+
+	return inactive
 }

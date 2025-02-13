@@ -151,10 +151,6 @@ func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbota
 func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
 	prevCommands[update.CallbackQuery.Message.Chat.ID] = enum.BotCommandNameTypeInputDate
 
-	tmpTracking := dto.Trackings[update.CallbackQuery.Message.Chat.ID]
-	tmpTracking.SupplyType = fmt.Sprint(buttonData.Value)
-	dto.Trackings[update.CallbackQuery.Message.Chat.ID] = tmpTracking
-
 	err := h.service.ButtonTypeSupplyTypeService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
 	if err != nil {
 		return errors.Wrap(err, "service.ButtonTypeSupplyTypeService")
@@ -186,13 +182,12 @@ func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) er
 			return errors.Wrap(err, "BotSlashCommandTypeAddHandler")
 		}
 	case BotSlashCommands[enum.BotSlashCommandTypeStop]:
-
+		break
 	case BotSlashCommands[enum.BotSlashCommandTypeCheck]:
 		err := h.BotSlashCommandTypeCheckHandler(ctx, update)
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
 		}
-
 	default:
 		err := h.BotSlashCommandTypeDefaultHandler(ctx, update)
 		if err != nil {
@@ -220,11 +215,6 @@ func (h *handler) BotSlashCommandTypeHelpHandler(ctx context.Context, update tgb
 
 func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbotapi.Update) error {
 	prevCommands[update.Message.Chat.ID] = enum.BotCommandNameTypeInputDate
-
-	// err := h.service.BotSlashCommandTypeAddService(ctx, update.Message.Chat.ID)
-	// if err != nil {
-	// 	return errors.Wrap(err, "BotSlashCommandTypeAddService")
-	// }
 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
 	if _, err := h.bot.Send(msg); err != nil {

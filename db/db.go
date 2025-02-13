@@ -52,7 +52,17 @@ func (pg *Postgres) Close() {
 }
 
 func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error) {
-	query := `SELECT chat_id, from_date, to_date, warehouse, coeff_limit, supply_type, is_active FROM supplies WHERE chat_id = (@ChatID)`
+	query := `
+		SELECT chat_id,
+			   from_date,
+			   to_date,
+			   warehouse,
+			   coeff_limit,
+			   supply_type,
+			   is_active
+		FROM supplies
+		WHERE chat_id = (@ChatID)`
+
 	args := pgx.NamedArgs{
 		"ChatID": ChatID,
 	}

@@ -35,7 +35,10 @@ func main() {
 		dbname,
 	)
 
-	dbpool, err := db.NewPG(context.Background(), connString)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	dbpool, err := db.NewPG(ctx, connString)
 	if err != nil {
 		log.Fatalf("db.NewPG: %s", err)
 	}
@@ -49,7 +52,7 @@ func main() {
 
 	handler := handler.NewHandler(bot, service)
 
-	err = handler.Run(context.Background())
+	err = handler.Run(ctx)
 	if err != nil {
 		fmt.Printf("handler.Run: %s", err.Error())
 	}

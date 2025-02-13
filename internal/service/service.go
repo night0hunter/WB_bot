@@ -87,7 +87,6 @@ func (s *Service) BotAnswerInputCoeffLimitService(ctx context.Context, chatID in
 
 func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error) {
 	var warehouseStrs []string
-	var tmp, isActive string
 
 	warehouses, err := s.Repository.SelectQuery(ctx, chatID)
 	if err != nil {
@@ -95,13 +94,18 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 	}
 
 	for _, wh := range warehouses {
-		isActive = "Неактивно"
-		if wh.IsActive {
-			isActive = "Активно"
-		}
-
-		tmp = fmt.Sprintf("Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s", enum.WarehouseNames[wh.Warehouse], wh.FromDate.Format(dto.TimeFormat), wh.ToDate.Format(dto.TimeFormat), wh.CoeffLimit, enum.SupplyTypes[wh.SupplyType], isActive)
-		warehouseStrs = append(warehouseStrs, tmp)
+		warehouseStrs = append(
+			warehouseStrs,
+			fmt.Sprintf(
+				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
+				enum.WarehouseNames[wh.Warehouse],
+				wh.FromDate.Format(dto.TimeFormat),
+				wh.ToDate.Format(dto.TimeFormat),
+				wh.CoeffLimit,
+				enum.SupplyTypes[wh.SupplyType],
+				utils.BoolToActiveRU(wh.IsActive),
+			),
+		)
 	}
 
 	return warehouseStrs, nil
