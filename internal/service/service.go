@@ -1,0 +1,108 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"wb_bot/internal/dto"
+	"wb_bot/internal/enum"
+	"wb_bot/internal/utils"
+
+	"github.com/pkg/errors"
+)
+
+type Repository interface {
+	SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error)
+	InsertQuery(ctx context.Context, params dto.WarehouseData) error
+	DeleteQuery(ctx context.Context, params dto.WarehouseData) error
+}
+
+type Service struct {
+	Repository Repository
+}
+
+func NewService(rep Repository) *Service {
+	return &Service{Repository: rep}
+}
+
+func (s *Service) ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
+	tmpTracking := dto.Trackings[chatID]
+	tmpTracking.Warehouse = buttonData.Value
+	dto.Trackings[chatID] = tmpTracking
+
+	return nil
+}
+
+func (s *Service) ButtonTypeCoeffLimitService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
+	tmpTracking := dto.Trackings[chatID]
+	tmpTracking.CoeffLimit = buttonData.Value
+	dto.Trackings[chatID] = tmpTracking
+
+	return nil
+}
+
+func (s *Service) ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
+	err := s.Repository.InsertQuery(ctx, dto.Trackings[chatID])
+	if err != nil {
+		return errors.Wrap(err, "Repository.InsertQuery")
+	}
+
+	tmpTracking := dto.Trackings[chatID]
+	tmpTracking.SupplyType = fmt.Sprint(buttonData.Value)
+	dto.Trackings[chatID] = tmpTracking
+
+	return nil
+}
+
+func (s *Service) BotAnswerInputDateService(ctx context.Context, chatID int64, date string) error {
+	dateFrom, dateTo, err := utils.ParseTimeRange(date)
+	if err != nil {
+		return errors.Wrap(err, "utils.ParseTimeRange")
+	}
+
+	// usersMutex.Lock()
+	dto.Trackings[chatID] = dto.WarehouseData{ChatID: chatID}
+	// usersMutex.Unlock()
+
+	tmpTracking := dto.Trackings[chatID]
+
+	tmpTracking.FromDate = dateFrom
+	tmpTracking.ToDate = dateTo
+	dto.Trackings[chatID] = tmpTracking
+
+	return nil
+}
+
+func (s *Service) BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) error {
+	parsedCoeff, err := utils.ParseCoeffLimit(coeffLimit)
+	if err != nil {
+		return errors.Wrap(err, "utils.ParseCoeffLimit")
+	}
+
+	tmpTracking := dto.Trackings[chatID]
+	tmpTracking.CoeffLimit = parsedCoeff
+	dto.Trackings[chatID] = tmpTracking
+
+	return nil
+}
+
+func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error) {
+	var warehouseStrs []string
+	var tmp, isActive string
+
+	warehouses, err := s.Repository.SelectQuery(ctx, chatID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Repository.SelectQuery")
+	}
+
+	for _, wh := range warehouses {
+		isActive = "Неактивно"
+		if wh.IsActive {
+			isActive = "Активно"
+		}
+
+		tmp = fmt.Sprintf("Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s", enum.WarehouseNames[wh.Warehouse], wh.FromDate.Format(dto.TimeFormat), wh.ToDate.Format(dto.TimeFormat), wh.CoeffLimit, enum.SupplyTypes[wh.SupplyType], isActive)
+		warehouseStrs = append(warehouseStrs, tmp)
+	}
+
+	return warehouseStrs, nil
+}

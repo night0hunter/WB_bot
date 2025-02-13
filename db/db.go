@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
+	"wb_bot/internal/dto"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,16 +19,6 @@ var (
 	PgInstance *Postgres
 	pgOnce     sync.Once
 )
-
-type WarehouseData struct {
-	ChatID     int64
-	FromDate   time.Time
-	ToDate     time.Time
-	Warehouse  string
-	CoeffLimit string
-	SupplyType string
-	IsActive   bool
-}
 
 func NewPG(ctx context.Context, connString string) (*Postgres, error) {
 	var err error
@@ -61,8 +51,8 @@ func (pg *Postgres) Close() {
 	pg.db.Close()
 }
 
-func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]WarehouseData, error) {
-	query := `SELECT from_date, to_date, warehouse, coeff_limit, supply_type, is_active FROM supplies WHERE chat_id = (@ChatID)`
+func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error) {
+	query := `SELECT chat_id, from_date, to_date, warehouse, coeff_limit, supply_type, is_active FROM supplies WHERE chat_id = (@ChatID)`
 	args := pgx.NamedArgs{
 		"ChatID": ChatID,
 	}
@@ -72,10 +62,10 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]WarehouseD
 		return nil, fmt.Errorf("unable to scan row: %w", err)
 	}
 
-	warehouses := []WarehouseData{}
+	warehouses := []dto.WarehouseData{}
 	for rows.Next() {
-		warehouse := WarehouseData{}
-		err := rows.Scan(&warehouse.FromDate, &warehouse.ToDate, &warehouse.Warehouse, &warehouse.CoeffLimit, &warehouse.SupplyType, &warehouse.IsActive)
+		warehouse := dto.WarehouseData{}
+		err := rows.Scan(&warehouse.ChatID, &warehouse.FromDate, &warehouse.ToDate, &warehouse.Warehouse, &warehouse.CoeffLimit, &warehouse.SupplyType, &warehouse.IsActive)
 		if err != nil {
 			return nil, fmt.Errorf("unable to scan row: %w", err)
 		}
@@ -86,7 +76,7 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]WarehouseD
 	return warehouses, nil
 }
 
-func (pg *Postgres) InsertQuery(ctx context.Context, params WarehouseData) error {
+func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) error {
 	query := `INSERT INTO supplies (chat_id, from_date, to_date, Warehouse, coeff_limit, supply_type) VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType)`
 	args := pgx.NamedArgs{
 		"ChatID":     params.ChatID,
@@ -100,6 +90,17 @@ func (pg *Postgres) InsertQuery(ctx context.Context, params WarehouseData) error
 	_, err := pg.db.Exec(ctx, query, args)
 	if err != nil {
 		return fmt.Errorf("unable to insert row: %w", err)
+	}
+
+	return nil
+}
+
+func (pg *Postgres) DeleteQuery(ctx context.Context, params dto.WarehouseData) error {
+	query := fmt.Sprintf("DELETE FROM supplies WHERE warehouse=%d", params.Warehouse)
+
+	_, err := pg.db.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("unable to delete row: %w", err)
 	}
 
 	return nil
