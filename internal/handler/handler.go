@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
+
 	keyboard "wb_bot/internal/handler/keyboard"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -18,6 +20,7 @@ type Service interface {
 	ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeCoeffLimitService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
+	BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string
 	// BotSlashCommandTypeAddService(ctx context.Context, chatID int64) error
 	// BotSlashCommandTypeStopService(ctx context.Context, chatID int64) error // ADD
 	BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error)
@@ -171,19 +174,19 @@ func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbota
 
 func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) error {
 	switch update.Message.Text {
-	case BotSlashCommands[enum.BotSlashCommandTypeHelp]:
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeHelp]:
 		err := h.BotSlashCommandTypeHelpHandler(ctx, update)
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeHelpHandler")
 		}
-	case BotSlashCommands[enum.BotSlashCommandTypeAdd]:
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeAdd]:
 		err := h.BotSlashCommandTypeAddHandler(ctx, update)
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeAddHandler")
 		}
-	case BotSlashCommands[enum.BotSlashCommandTypeStop]:
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeStop]:
 		break
-	case BotSlashCommands[enum.BotSlashCommandTypeCheck]:
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeCheck]:
 		err := h.BotSlashCommandTypeCheckHandler(ctx, update)
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
@@ -199,13 +202,9 @@ func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) er
 }
 
 func (h *handler) BotSlashCommandTypeHelpHandler(ctx context.Context, update tgbotapi.Update) error {
-	var msg tgbotapi.MessageConfig
+	text := h.service.BotSlashCommandTypeHelpService(ctx, update.Message.Chat.ID)
 
-	// err := h.service.BotSlashCommandTypeHelpService(ctx, update.Message.Chat.ID)
-	// if err != nil {
-	// 	return errors.Wrap(err, "service.BotSlashCommandTypeHelpService")
-	// }
-
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	if _, err := h.bot.Send(msg); err != nil {
 		return errors.Wrap(err, "bot.Send")
 	}
@@ -231,7 +230,7 @@ func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tg
 	}
 
 	if whs == nil {
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент вы не отслеживаете ни одного склада, чтобы добавить, используйте %s:", BotSlashCommands[enum.BotSlashCommandTypeCheck]))
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент вы не отслеживаете ни одного склада, чтобы добавить, используйте %s", constmsg.BotSlashCommands[enum.BotSlashCommandTypeAdd]))
 		if _, err := h.bot.Send(msg); err != nil {
 			return errors.Wrap(err, "bot.Send")
 		}

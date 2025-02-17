@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	"wb_bot/internal/utils"
@@ -109,4 +110,14 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 	}
 
 	return warehouseStrs, nil
+}
+
+func (s *Service) BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string {
+	var text string
+
+	for cmd, desc := range constmsg.BotSlashCommandsHelp {
+		text += cmd + " - " + desc + "\n"
+	}
+
+	return text
 }
