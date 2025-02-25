@@ -14,20 +14,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-var prevCommands = map[int64]enum.BotCommandNameType{}
+type prevCommandInfo struct {
+	CommandName enum.BotCommandNameType
+	MessageID   int
+}
+
+// var prevCommands = map[int64]enum.BotCommandNameType{}
+var prevCommands = map[int64]prevCommandInfo{}
 
 type Service interface {
 	ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeCoeffLimitService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string
-	// BotSlashCommandTypeAddService(ctx context.Context, chatID int64) error
-	// BotSlashCommandTypeStopService(ctx context.Context, chatID int64) error // ADD
 	BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error)
 	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) error
-	// BotAnswerInputWarehouseService(ctx context.Context, chatID int64) error
 	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) error
-	// BotAnswerInputSupplyTypeService(ctx context.Context, chatID int64) error
 }
 
 type handler struct {
@@ -66,22 +68,9 @@ func (h *handler) Run(ctx context.Context) error {
 				return errors.Wrap(err, "json.Unmarshal")
 			}
 
-			switch buttonData.Type {
-			case enum.ButtonTypeWarehouse:
-				err := h.ButtonTypeWarehouseHandler(ctx, update, buttonData)
-				if err != nil {
-					return errors.Wrap(err, "ButtonTypeWarehouseHandler")
-				}
-			case enum.ButtonTypeCoeffLimit:
-				err := h.ButtonTypeCoeffLimitHandler(ctx, update, buttonData)
-				if err != nil {
-					return errors.Wrap(err, "ButtonTypeCoeffLimitHandler")
-				}
-			case enum.ButtonTypeSupplyType:
-				err := h.ButtonTypeSupplyTypeHandler(ctx, update, buttonData)
-				if err != nil {
-					return errors.Wrap(err, "ButtonTypeSupplyTypeHandler")
-				}
+			err = h.ButtonHandler(ctx, update, buttonData)
+			if err != nil {
+				return errors.Wrap(err, "ButtonHandler")
 			}
 
 			continue
@@ -99,75 +88,118 @@ func (h *handler) Run(ctx context.Context) error {
 	return nil
 }
 
-func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
-	prevCommands[update.CallbackQuery.Message.Chat.ID] = enum.BotCommandNameTypeInputCoeffLimit
+func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
+	switch buttonData.Type {
+	case enum.ButtonTypeWarehouse:
+		err := h.ButtonTypeWarehouseHandler(ctx, update, buttonData)
+		if err != nil {
+			return errors.Wrap(err, "ButtonTypeWarehouseHandler")
+		}
+	case enum.ButtonTypeCoeffLimit:
+		err := h.ButtonTypeCoeffLimitHandler(ctx, update, buttonData)
+		if err != nil {
+			return errors.Wrap(err, "ButtonTypeCoeffLimitHandler")
+		}
+	case enum.ButtonTypeSupplyType:
+		err := h.ButtonTypeSupplyTypeHandler(ctx, update, buttonData)
+		if err != nil {
+			return errors.Wrap(err, "ButtonTypeSupplyTypeHandler")
+		}
+	case enum.ButtonTypeUserTrackingStatus:
+		// err := h.
+	}
 
+	return nil
+}
+
+func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
 	err := h.service.ButtonTypeWarehouseService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
 	if err != nil {
 		return errors.Wrap(err, "service.ButtonTypeWarehouseService")
 	}
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Вы выбрали склад %s", enum.WarehouseNames[buttonData.Value]))
-	if _, err := h.bot.Send(msg); err != nil {
-		return errors.Wrap(err, "bot.Send")
-	}
-
-	msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputCoeffLimit])
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputCoeffLimit])
 	msg, err = keyboard.DrawCoeffKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
 	}
 
-	if _, err := h.bot.Send(msg); err != nil {
-		return errors.Wrap(err, "bot.Send")
+	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
+		return errors.Wrap(err, "bot.Send2")
+	}
+
+	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeInputCoeffLimit,
+		MessageID:   message.MessageID,
 	}
 
 	return nil
 }
 
 func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
-	prevCommands[update.CallbackQuery.Message.Chat.ID] = enum.BotCommandNameTypeInputSupplyType
-
 	err := h.service.ButtonTypeCoeffLimitService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
 	if err != nil {
 		return errors.Wrap(err, "service.ButtonTypeCoeffLimitService")
 	}
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Вы выбрали %dx", buttonData.Value))
-	if _, err := h.bot.Send(msg); err != nil {
-		return errors.Wrap(err, "bot.Send")
-	}
-
-	msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputSupplyType])
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputSupplyType])
 	msg, err = keyboard.DrawSupplyKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawSupplyKeyboard")
 	}
 
-	if _, err := h.bot.Send(msg); err != nil {
+	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
 		return errors.Wrap(err, "bot.Send")
+	}
+
+	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeInputSupplyType,
+		MessageID:   message.MessageID,
 	}
 
 	return nil
 }
 
 func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
-	prevCommands[update.CallbackQuery.Message.Chat.ID] = enum.BotCommandNameTypeInputDate
-
 	err := h.service.ButtonTypeSupplyTypeService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
 	if err != nil {
 		return errors.Wrap(err, "service.ButtonTypeSupplyTypeService")
 	}
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf("Вы выбрали тип поставки %d", buttonData.Value))
-	if _, err := h.bot.Send(msg); err != nil {
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен!")
+
+	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	_, err = h.bot.Send(msg)
+	if err != nil {
 		return errors.Wrap(err, "bot.Send")
 	}
 
-	msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен!")
-	if _, err := h.bot.Send(msg); err != nil {
-		return errors.Wrap(err, "bot.Send")
-	}
+	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{}
 
 	return nil
 }
@@ -213,11 +245,16 @@ func (h *handler) BotSlashCommandTypeHelpHandler(ctx context.Context, update tgb
 }
 
 func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbotapi.Update) error {
-	prevCommands[update.Message.Chat.ID] = enum.BotCommandNameTypeInputDate
-
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
-	if _, err := h.bot.Send(msg); err != nil {
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
 		return errors.Wrap(err, "bot.Send")
+	}
+
+	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeInputDate,
+		MessageID:   message.MessageID,
 	}
 
 	return nil
@@ -254,17 +291,7 @@ func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tg
 }
 
 // TODO: add /stop function
-func (h *handler) BotSlashCommandTypeStopHandler(ctx context.Context, update tgbotapi.Update) error {
-	// err := h.service.BotSlashCommandTypeStopService(ctx, update.Message.Chat.ID)
-	// if err != nil {
-	// 	return errors.Wrap(err, "service.BotSlashCommandTypeStopService")
-	// }
-
-	// msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Выберите отслеживание из списка ниже, чтобы приостановить/удалить")
-	// if _, err := h.bot.Send(keyboard.DrawTrackingsKeyboard(msg, warehouses)); err != nil {
-	// 	errors.Wrap(err, "bot.Send")
-	// }
-
+func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update tgbotapi.Update) error {
 	return nil
 }
 
@@ -277,10 +304,11 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 			errors.Wrap(err, "bot.Send")
 		}
 
-		return errors.New("Unknown command")
+		// return errors.New("Unknown command")
+		return nil
 	}
 
-	switch prevCommand {
+	switch prevCommand.CommandName {
 	case enum.BotCommandNameTypeInputDate:
 		err := h.BotAnswerInputDateHandler(ctx, update)
 		if err != nil {
@@ -309,28 +337,38 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 }
 
 func (h *handler) BotAnswerInputDateHandler(ctx context.Context, update tgbotapi.Update) error {
-	var msg tgbotapi.MessageConfig
-
-	prevCommands[update.Message.Chat.ID] = enum.BotCommandNameTypeInputWarehouse
-
 	err := h.service.BotAnswerInputDateService(ctx, update.Message.Chat.ID, update.Message.Text)
 	if err != nil {
 		return errors.Wrap(err, "service.BotAnswerInputDateService")
 	}
 
-	msg = tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
-	if _, err := h.bot.Send((msg)); err != nil {
-		errors.Wrap(err, "bot.Send")
-	}
-
-	msg = tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
 	msg, err = keyboard.DrawWarehouseKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawWarehouseKeyboard")
 	}
 
-	if _, err := h.bot.Send(msg); err != nil {
+	prevCommand, ok := prevCommands[update.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
+	if _, err := h.bot.Send(deleteMsg); err != nil {
+		fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+	}
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
 		return errors.Wrap(err, "bot.Send")
+	}
+
+	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeInputWarehouse,
+		MessageID:   message.MessageID,
 	}
 
 	return nil
@@ -351,8 +389,6 @@ func (h *handler) BotAnswerInputWarehouseHandler(ctx context.Context, update tgb
 }
 
 func (h *handler) BotAnswerInputCoeffLimitHandler(ctx context.Context, update tgbotapi.Update) error {
-	prevCommands[update.Message.Chat.ID] = enum.BotCommandNameTypeInputSupplyType
-
 	err := h.service.BotAnswerInputCoeffLimitService(ctx, update.Message.Chat.ID, update.Message.Text)
 	if err != nil {
 		return errors.Wrap(err, "service.BotAnswerInputCoeffLimitService")
@@ -364,8 +400,27 @@ func (h *handler) BotAnswerInputCoeffLimitHandler(ctx context.Context, update tg
 		return errors.Wrap(err, "keyboard.DrawSupplyKeyboard")
 	}
 
-	if _, err := h.bot.Send(msg); err != nil {
+	prevCommand, ok := prevCommands[update.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
+	if _, err := h.bot.Send(deleteMsg); err != nil {
+		fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+	}
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
 		return errors.Wrap(err, "bot.Send")
+	}
+
+	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeInputSupplyType,
+		MessageID:   message.MessageID,
 	}
 
 	return nil

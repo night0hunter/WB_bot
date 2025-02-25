@@ -69,7 +69,7 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 
 	rows, err := pg.db.Query(ctx, query, args)
 	if err != nil {
-		return nil, fmt.Errorf("unable to scan row: %w", err)
+		return nil, errors.Wrap(err, "unable to scan row")
 	}
 
 	warehouses := []dto.WarehouseData{}
@@ -77,7 +77,7 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 		warehouse := dto.WarehouseData{}
 		err := rows.Scan(&warehouse.ChatID, &warehouse.FromDate, &warehouse.ToDate, &warehouse.Warehouse, &warehouse.CoeffLimit, &warehouse.SupplyType, &warehouse.IsActive)
 		if err != nil {
-			return nil, fmt.Errorf("unable to scan row: %w", err)
+			return nil, errors.Wrap(err, "unable to scan row")
 		}
 
 		warehouses = append(warehouses, warehouse)
@@ -99,7 +99,7 @@ func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) e
 
 	_, err := pg.db.Exec(ctx, query, args)
 	if err != nil {
-		return fmt.Errorf("unable to insert row: %w", err)
+		return errors.Wrap(err, "unable to insert row")
 	}
 
 	return nil
@@ -110,7 +110,7 @@ func (pg *Postgres) DeleteQuery(ctx context.Context, params dto.WarehouseData) e
 
 	_, err := pg.db.Exec(ctx, query)
 	if err != nil {
-		return fmt.Errorf("unable to delete row: %w", err)
+		return errors.Wrap(err, "unable to delete row")
 	}
 
 	return nil

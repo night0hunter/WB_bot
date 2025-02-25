@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
-	"wb_bot/internal/enum"
 	"wb_bot/internal/utils"
 
 	"github.com/pkg/errors"
@@ -42,14 +42,14 @@ func (s *Service) ButtonTypeCoeffLimitService(ctx context.Context, chatID int64,
 }
 
 func (s *Service) ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
+	tmpTracking := dto.Trackings[chatID]
+	tmpTracking.SupplyType = strconv.Itoa(buttonData.Value)
+	dto.Trackings[chatID] = tmpTracking
+
 	err := s.Repository.InsertQuery(ctx, dto.Trackings[chatID])
 	if err != nil {
 		return errors.Wrap(err, "Repository.InsertQuery")
 	}
-
-	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.SupplyType = fmt.Sprint(buttonData.Value)
-	dto.Trackings[chatID] = tmpTracking
 
 	return nil
 }
@@ -99,11 +99,11 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 			warehouseStrs,
 			fmt.Sprintf(
 				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
-				enum.WarehouseNames[wh.Warehouse],
+				constmsg.WarehouseNames[wh.Warehouse],
 				wh.FromDate.Format(dto.TimeFormat),
 				wh.ToDate.Format(dto.TimeFormat),
 				wh.CoeffLimit,
-				enum.SupplyTypes[wh.SupplyType],
+				constmsg.SupplyTypes[wh.SupplyType],
 				utils.BoolToActiveRU(wh.IsActive),
 			),
 		)

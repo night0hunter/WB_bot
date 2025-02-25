@@ -649,7 +649,7 @@ package main
 // 	return msg
 // }
 
-// // todo: add adaptive message depended on IsActive field
+// // TODO: add adaptive message depended on IsActive field
 // func drawTrackingStatusKeyboard(msg tgbotapi.MessageConfig) tgbotapi.MessageConfig {
 // 	tmpMarkup, err := generateKeyboard([]Button{
 // 		{
