@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
@@ -17,6 +18,7 @@ import (
 type prevCommandInfo struct {
 	CommandName enum.BotCommandNameType
 	MessageID   int
+	Info        dto.WarehouseData
 }
 
 // var prevCommands = map[int64]enum.BotCommandNameType{}
@@ -28,8 +30,8 @@ type Service interface {
 	ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string
 	BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error)
-	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) error
-	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) error
+	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error)
+	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) (int, error)
 }
 
 type handler struct {
@@ -118,7 +120,16 @@ func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotap
 		return errors.Wrap(err, "service.ButtonTypeWarehouseService")
 	}
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputCoeffLimit])
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n%s",
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+		constmsg.WarehouseNames[buttonData.Value],
+		"",
+		"",
+		BotCommands[enum.BotCommandNameTypeInputCoeffLimit],
+	))
+	// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputCoeffLimit])
 	msg, err = keyboard.DrawCoeffKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
@@ -140,6 +151,11 @@ func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotap
 	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
 		CommandName: enum.BotCommandNameTypeInputCoeffLimit,
 		MessageID:   message.MessageID,
+		Info: dto.WarehouseData{
+			FromDate:      prevCommand.Info.FromDate,
+			ToDate:        prevCommand.Info.ToDate,
+			WarehouseName: constmsg.WarehouseNames[buttonData.Value],
+		},
 	}
 
 	return nil
@@ -151,7 +167,17 @@ func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbota
 		return errors.Wrap(err, "service.ButtonTypeCoeffLimitService")
 	}
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputSupplyType])
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
+		buttonData.Value,
+		"",
+		BotCommands[enum.BotCommandNameTypeInputSupplyType],
+	))
+
+	// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputSupplyType])
 	msg, err = keyboard.DrawSupplyKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawSupplyKeyboard")
@@ -173,6 +199,12 @@ func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbota
 	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
 		CommandName: enum.BotCommandNameTypeInputSupplyType,
 		MessageID:   message.MessageID,
+		Info: dto.WarehouseData{
+			FromDate:      prevCommand.Info.FromDate,
+			ToDate:        prevCommand.Info.ToDate,
+			WarehouseName: prevCommand.Info.WarehouseName,
+			CoeffLimit:    buttonData.Value,
+		},
 	}
 
 	return nil
@@ -184,7 +216,17 @@ func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbota
 		return errors.Wrap(err, "service.ButtonTypeSupplyTypeService")
 	}
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен!")
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.CoeffLimit,
+		constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)],
+		"Склад успешно добавлен",
+	))
+
+	// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен!")
 
 	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
 	if ok {
@@ -337,12 +379,22 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 }
 
 func (h *handler) BotAnswerInputDateHandler(ctx context.Context, update tgbotapi.Update) error {
-	err := h.service.BotAnswerInputDateService(ctx, update.Message.Chat.ID, update.Message.Text)
+	timeRange, err := h.service.BotAnswerInputDateService(ctx, update.Message.Chat.ID, update.Message.Text)
 	if err != nil {
 		return errors.Wrap(err, "service.BotAnswerInputDateService")
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf(
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n%s",
+		timeRange.DateFrom.Format(dto.TimeFormat),
+		timeRange.DateTo.Format(dto.TimeFormat),
+		"",
+		"",
+		"",
+		BotCommands[enum.BotCommandNameTypeInputWarehouse],
+	))
+
+	// msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
 	msg, err = keyboard.DrawWarehouseKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawWarehouseKeyboard")
@@ -369,6 +421,7 @@ func (h *handler) BotAnswerInputDateHandler(ctx context.Context, update tgbotapi
 	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
 		CommandName: enum.BotCommandNameTypeInputWarehouse,
 		MessageID:   message.MessageID,
+		Info:        dto.WarehouseData{FromDate: timeRange.DateFrom, ToDate: timeRange.DateTo},
 	}
 
 	return nil
@@ -389,12 +442,22 @@ func (h *handler) BotAnswerInputWarehouseHandler(ctx context.Context, update tgb
 }
 
 func (h *handler) BotAnswerInputCoeffLimitHandler(ctx context.Context, update tgbotapi.Update) error {
-	err := h.service.BotAnswerInputCoeffLimitService(ctx, update.Message.Chat.ID, update.Message.Text)
+	coeff, err := h.service.BotAnswerInputCoeffLimitService(ctx, update.Message.Chat.ID, update.Message.Text)
 	if err != nil {
 		return errors.Wrap(err, "service.BotAnswerInputCoeffLimitService")
 	}
 
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputSupplyType])
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf(
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
+		prevCommands[update.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+		prevCommands[update.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+		prevCommands[update.Message.Chat.ID].Info.WarehouseName,
+		coeff,
+		"",
+		BotCommands[enum.BotCommandNameTypeInputSupplyType],
+	))
+
+	// msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputSupplyType])
 	msg, err = keyboard.DrawSupplyKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawSupplyKeyboard")
@@ -421,6 +484,10 @@ func (h *handler) BotAnswerInputCoeffLimitHandler(ctx context.Context, update tg
 	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
 		CommandName: enum.BotCommandNameTypeInputSupplyType,
 		MessageID:   message.MessageID,
+		Info: dto.WarehouseData{
+			FromDate:   prevCommand.Info.FromDate,
+			ToDate:     prevCommand.Info.ToDate,
+			CoeffLimit: coeff},
 	}
 
 	return nil

@@ -18,14 +18,15 @@ type Button struct {
 }
 
 type WarehouseData struct {
-	TrackingID int64
-	ChatID     int64
-	FromDate   time.Time
-	ToDate     time.Time
-	Warehouse  int
-	CoeffLimit int
-	SupplyType string
-	IsActive   bool
+	TrackingID    int64
+	ChatID        int64
+	FromDate      time.Time
+	ToDate        time.Time
+	Warehouse     int
+	WarehouseName string
+	CoeffLimit    int
+	SupplyType    string
+	IsActive      bool
 }
 
 var Trackings = map[int64]WarehouseData{}
@@ -34,3 +35,8 @@ var Trackings = map[int64]WarehouseData{}
 // 	Text     string
 // 	IsActive bool
 // }
+
+type TrackingDate struct {
+	DateFrom time.Time
+	DateTo   time.Time
+}

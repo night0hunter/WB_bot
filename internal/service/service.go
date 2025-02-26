@@ -54,10 +54,10 @@ func (s *Service) ButtonTypeSupplyTypeService(ctx context.Context, chatID int64,
 	return nil
 }
 
-func (s *Service) BotAnswerInputDateService(ctx context.Context, chatID int64, date string) error {
+func (s *Service) BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error) {
 	dateFrom, dateTo, err := utils.ParseTimeRange(date)
 	if err != nil {
-		return errors.Wrap(err, "utils.ParseTimeRange")
+		return dto.TrackingDate{}, errors.Wrap(err, "utils.ParseTimeRange")
 	}
 
 	// usersMutex.Lock()
@@ -70,20 +70,23 @@ func (s *Service) BotAnswerInputDateService(ctx context.Context, chatID int64, d
 	tmpTracking.ToDate = dateTo
 	dto.Trackings[chatID] = tmpTracking
 
-	return nil
+	return dto.TrackingDate{
+		DateFrom: dateFrom,
+		DateTo:   dateTo,
+	}, nil
 }
 
-func (s *Service) BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) error {
+func (s *Service) BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) (int, error) {
 	parsedCoeff, err := utils.ParseCoeffLimit(coeffLimit)
 	if err != nil {
-		return errors.Wrap(err, "utils.ParseCoeffLimit")
+		return 0, errors.Wrap(err, "utils.ParseCoeffLimit")
 	}
 
 	tmpTracking := dto.Trackings[chatID]
 	tmpTracking.CoeffLimit = parsedCoeff
 	dto.Trackings[chatID] = tmpTracking
 
-	return nil
+	return parsedCoeff, nil
 }
 
 func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error) {
