@@ -44,10 +44,10 @@ type mergedResp struct {
 
 func GetWarehouseList() []Response {
 	// url := "https://supplies-api-sandbox.wildberries.ru/api/v1/acceptance/coefficients"
-	reqURL := "https://supplies-api.wildberries.ru/api/v1/acceptance/coefficients?warehouseIDs=507,316646,301229,120762,206348,130744,208277,117986,117501,1733,218644,206236,686"
+	reqURL := os.Getenv("REQ_URL")
 
 	// var bearer = "Bearer " + "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjQwOTA0djEiLCJ0eXAiOiJKV1QifQ.eyJlbnQiOjEsImV4cCI6MTc0MzIzMTM3MCwiaWQiOiIwMTkyMzRkNy0zMGM5LTc2ZDQtYTUxYy03MDlhZDViZjI0ZGIiLCJpaWQiOjQyNDA0MzM0LCJvaWQiOjEzOTA5MjIsInMiOjAsInNpZCI6IjYyYWMzZjVlLTZkODUtNDNkNy1iNTg0LTlmNjhmNzAwZjk0ZSIsInQiOnRydWUsInVpZCI6NDI0MDQzMzR9.Q9iFktjcoWCPGveWRH2zOwxwYW0tdQShZfVBgP0RzOoar2DiD1sLZU8i8WNf2JcZtt7sNHEbULc0QKfQ-hIs8Q"
-	var bearer = "Bearer " + "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjQxMjE3djEiLCJ0eXAiOiJKV1QifQ.eyJlbnQiOjEsImV4cCI6MTc1MjQ3NDE1MSwiaWQiOiIwMTk0NWJjMC1kNDMzLTdiYzQtOTQyZC05M2VhYzc2MDhhNjQiLCJpaWQiOjQyNDA0MzM0LCJvaWQiOjEzOTA5MjIsInMiOjEwNzM3NDI4NDgsInNpZCI6IjYyYWMzZjVlLTZkODUtNDNkNy1iNTg0LTlmNjhmNzAwZjk0ZSIsInQiOmZhbHNlLCJ1aWQiOjQyNDA0MzM0fQ.XbRLk4IVi5tALde2fNtHiwgWJxoZKJwzd0mJ0xM7lbXni8KIZ1wp3SSpPJmmzFL5ljxyPfGYCAmUpZm3ARd4yg"
+	var bearer = "Bearer " + os.Getenv("BEARER_TOKEN")
 
 	client := http.Client{
 		Timeout: time.Second * 2,
@@ -103,7 +103,7 @@ func checkApprops(warehouses []Response, userTrackings []dto.WarehouseData) []me
 				continue
 			}
 
-			if userTr.Warehouse != wh.WarehouseID {
+			if userTr.Warehouse != int64(wh.WarehouseID) {
 				continue
 			}
 

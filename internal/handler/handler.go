@@ -121,7 +121,7 @@ func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotap
 	}
 
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n%s",
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n---------------\n%s",
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
 		constmsg.WarehouseNames[buttonData.Value],
@@ -129,7 +129,7 @@ func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotap
 		"",
 		BotCommands[enum.BotCommandNameTypeInputCoeffLimit],
 	))
-	// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputCoeffLimit])
+
 	msg, err = keyboard.DrawCoeffKeyboard(msg)
 	if err != nil {
 		return errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
@@ -143,9 +143,25 @@ func (h *handler) ButtonTypeWarehouseHandler(ctx context.Context, update tgbotap
 		}
 	}
 
+	if buttonData.Value == -1 {
+		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
+
+		message, err := h.bot.Send(msg)
+		if err != nil {
+			return errors.Wrap(err, "bot.Send")
+		}
+
+		prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
+			CommandName: enum.BotCommandNameTypeInputDate,
+			MessageID:   message.MessageID,
+		}
+
+		return nil
+	}
+
 	message, err := h.bot.Send(msg)
 	if err != nil {
-		return errors.Wrap(err, "bot.Send2")
+		return errors.Wrap(err, "bot.Send")
 	}
 
 	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
@@ -168,7 +184,7 @@ func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbota
 	}
 
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n---------------\n%s",
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
@@ -189,6 +205,38 @@ func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbota
 		if _, err := h.bot.Send(deleteMsg); err != nil {
 			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
 		}
+	}
+
+	if buttonData.Value == -1 {
+		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
+			"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n---------------\n%s",
+			prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+			prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+			"",
+			"",
+			"",
+			BotCommands[enum.BotCommandNameTypeInputWarehouse],
+		))
+		msg, err = keyboard.DrawWarehouseKeyboard(msg)
+		if err != nil {
+			return errors.Wrap(err, "keyboard.DrawWarehouseKeyboard")
+		}
+
+		message, err := h.bot.Send(msg)
+		if err != nil {
+			return errors.Wrap(err, "bot.Send")
+		}
+
+		prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
+			CommandName: enum.BotCommandNameTypeInputWarehouse,
+			MessageID:   message.MessageID,
+			Info: dto.WarehouseData{
+				FromDate: prevCommand.Info.FromDate,
+				ToDate:   prevCommand.Info.ToDate,
+			},
+		}
+
+		return nil
 	}
 
 	message, err := h.bot.Send(msg)
@@ -217,7 +265,7 @@ func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbota
 	}
 
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n---------------\n%s",
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
 		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
@@ -234,6 +282,39 @@ func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbota
 		if _, err := h.bot.Send(deleteMsg); err != nil {
 			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
 		}
+	}
+
+	if buttonData.Value == -1 {
+		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
+			"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n---------------\n%s",
+			prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+			prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+			prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
+			"",
+			"",
+			BotCommands[enum.BotCommandNameTypeInputCoeffLimit],
+		))
+		msg, err = keyboard.DrawCoeffKeyboard(msg)
+		if err != nil {
+			return errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
+		}
+
+		message, err := h.bot.Send(msg)
+		if err != nil {
+			return errors.Wrap(err, "bot.Send")
+		}
+
+		prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{
+			CommandName: enum.BotCommandNameTypeInputCoeffLimit,
+			MessageID:   message.MessageID,
+			Info: dto.WarehouseData{
+				FromDate:      prevCommand.Info.FromDate,
+				ToDate:        prevCommand.Info.ToDate,
+				WarehouseName: prevCommand.Info.WarehouseName,
+			},
+		}
+
+		return nil
 	}
 
 	_, err = h.bot.Send(msg)
@@ -385,7 +466,7 @@ func (h *handler) BotAnswerInputDateHandler(ctx context.Context, update tgbotapi
 	}
 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf(
-		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n%s",
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n---------------\n%s",
 		timeRange.DateFrom.Format(dto.TimeFormat),
 		timeRange.DateTo.Format(dto.TimeFormat),
 		"",
@@ -487,7 +568,8 @@ func (h *handler) BotAnswerInputCoeffLimitHandler(ctx context.Context, update tg
 		Info: dto.WarehouseData{
 			FromDate:   prevCommand.Info.FromDate,
 			ToDate:     prevCommand.Info.ToDate,
-			CoeffLimit: coeff},
+			CoeffLimit: coeff,
+		},
 	}
 
 	return nil

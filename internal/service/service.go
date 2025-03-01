@@ -27,7 +27,7 @@ func NewService(rep Repository) *Service {
 
 func (s *Service) ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
 	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.Warehouse = buttonData.Value
+	tmpTracking.Warehouse = int64(buttonData.Value)
 	dto.Trackings[chatID] = tmpTracking
 
 	return nil
@@ -102,7 +102,7 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 			warehouseStrs,
 			fmt.Sprintf(
 				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
-				constmsg.WarehouseNames[wh.Warehouse],
+				constmsg.WarehouseNames[int(wh.Warehouse)],
 				wh.FromDate.Format(dto.TimeFormat),
 				wh.ToDate.Format(dto.TimeFormat),
 				wh.CoeffLimit,

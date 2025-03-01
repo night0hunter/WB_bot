@@ -22,19 +22,19 @@ type WarehouseData struct {
 	ChatID        int64
 	FromDate      time.Time
 	ToDate        time.Time
-	Warehouse     int
+	Warehouse     int64
 	WarehouseName string
 	CoeffLimit    int
 	SupplyType    string
 	IsActive      bool
 }
 
-var Trackings = map[int64]WarehouseData{}
-
-// type CheckWarehouse struct {
-// 	Text     string
-// 	IsActive bool
+// type WarehouseDataExt struct {
+// 	WarehouseData
+// 	WarehouseName string
 // }
+
+var Trackings = map[int64]WarehouseData{}
 
 type TrackingDate struct {
 	DateFrom time.Time

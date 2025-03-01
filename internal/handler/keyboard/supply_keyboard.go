@@ -1,6 +1,7 @@
 package keyboard
 
 import (
+	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 
@@ -14,21 +15,28 @@ func DrawSupplyKeyboard(msg tgbotapi.MessageConfig) (tgbotapi.MessageConfig, err
 				Type:  enum.ButtonTypeSupplyType,
 				Value: 2,
 			},
-			Text: "Короб",
+			Text: constmsg.SupplyTypes[enum.Box],
 		},
 		{
 			Data: dto.ButtonData{
 				Type:  enum.ButtonTypeSupplyType,
 				Value: 5,
 			},
-			Text: "Монопалеты",
+			Text: constmsg.SupplyTypes[enum.Monopallet],
 		},
 		{
 			Data: dto.ButtonData{
 				Type:  enum.ButtonTypeSupplyType,
 				Value: 6,
 			},
-			Text: "Суперсейф",
+			Text: constmsg.SupplyTypes[enum.SuperSafe],
+		},
+		{
+			Data: dto.ButtonData{
+				Type:  enum.ButtonTypeSupplyType,
+				Value: -1,
+			},
+			Text: "Назад",
 		},
 	}...)
 	if err != nil {

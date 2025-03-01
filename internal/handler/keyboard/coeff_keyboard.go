@@ -37,13 +37,13 @@ func DrawCoeffKeyboard(msg tgbotapi.MessageConfig) (tgbotapi.MessageConfig, erro
 			},
 			Text: "3x",
 		},
-		// {
-		// 	Data: dto.ButtonData{
-		// 		Type:  enum.ButtonTypeUserTrackingStatus,
-		// 		Value: 1,
-		// 	},
-		// 	Text: "Назад",
-		// },
+		{
+			Data: dto.ButtonData{
+				Type:  enum.ButtonTypeCoeffLimit,
+				Value: -1,
+			},
+			Text: "Назад",
+		},
 	}...)
 	if err != nil {
 		return msg, err

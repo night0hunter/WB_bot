@@ -107,6 +107,13 @@ func DrawWarehouseKeyboard(msg tgbotapi.MessageConfig) (tgbotapi.MessageConfig, 
 			},
 			Text: "Новосибирск",
 		},
+		{
+			Data: dto.ButtonData{
+				Type:  enum.ButtonTypeWarehouse,
+				Value: -1,
+			},
+			Text: "Назад",
+		},
 	}...)
 	if err != nil {
 		return msg, err
@@ -115,5 +122,4 @@ func DrawWarehouseKeyboard(msg tgbotapi.MessageConfig) (tgbotapi.MessageConfig, 
 	msg.ReplyMarkup = tmpMarkup
 
 	return msg, nil
-
 }
