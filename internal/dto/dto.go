@@ -40,3 +40,8 @@ type TrackingDate struct {
 	DateFrom time.Time
 	DateTo   time.Time
 }
+
+type TrackingStatus struct {
+	UserID int64
+	Status int
+}

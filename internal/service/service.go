@@ -14,7 +14,9 @@ import (
 type Repository interface {
 	SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error)
 	InsertQuery(ctx context.Context, params dto.WarehouseData) error
-	DeleteQuery(ctx context.Context, params dto.WarehouseData) error
+	InsertTrackingStatus(ctx context.Context, params dto.TrackingStatus) error
+	SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error)
+	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
 }
 
 type Service struct {
@@ -123,4 +125,27 @@ func (s *Service) BotSlashCommandTypeHelpService(ctx context.Context, chatID int
 	}
 
 	return text
+}
+
+func (s *Service) BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error) {
+	warehouses, err := s.Repository.SelectQuery(ctx, chatID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Repository.SelectQuery")
+	}
+
+	return warehouses, nil
+}
+
+func (s *Service) ButtonTypeChangeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
+	status, err := s.Repository.SelectTrackingStatus(ctx, chatID, int64(buttonData.Value))
+	if err != nil {
+		return errors.Wrap(err, "Repository.SelectTrackingStatus")
+	}
+
+	err = s.Repository.ChangeTrackingStatus(ctx, int64(buttonData.Value), status)
+	if err != nil {
+		return errors.Wrap(err, "Repository.ChangeTrackingStatus")
+	}
+
+	return nil
 }

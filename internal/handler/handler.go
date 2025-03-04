@@ -28,10 +28,12 @@ type Service interface {
 	ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeCoeffLimitService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
+	ButtonTypeChangeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string
 	BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error)
 	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error)
 	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) (int, error)
+	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
 }
 
 type handler struct {
@@ -107,8 +109,36 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update, but
 		if err != nil {
 			return errors.Wrap(err, "ButtonTypeSupplyTypeHandler")
 		}
-	case enum.ButtonTypeUserTrackingStatus:
-		// err := h.
+	case enum.ButtonTypeUserTrackings:
+		err := h.ButtonTypeUserTrackingsHandler(ctx, update, buttonData)
+		if err != nil {
+			return errors.Wrap(err, "ButtonTypeUserTrackingsHandler")
+		}
+	}
+
+	return nil
+}
+
+func (h *handler) ButtonTypeUserTrackingsHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
+	err := h.service.ButtonTypeChangeService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
+	if err != nil {
+		return errors.Wrap(err, "service.ButtonTypeChangeService")
+	}
+
+	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{}
+
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Статус отслеживания успешно изменён")
+	_, err = h.bot.Send(msg)
+	if err != nil {
+		return errors.Wrap(err, "bot.Send")
 	}
 
 	return nil
@@ -259,23 +289,6 @@ func (h *handler) ButtonTypeCoeffLimitHandler(ctx context.Context, update tgbota
 }
 
 func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
-	err := h.service.ButtonTypeSupplyTypeService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
-	if err != nil {
-		return errors.Wrap(err, "service.ButtonTypeSupplyTypeService")
-	}
-
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n---------------\n%s",
-		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
-		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
-		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
-		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.CoeffLimit,
-		constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)],
-		"Склад успешно добавлен",
-	))
-
-	// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен!")
-
 	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
 	if ok {
 		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, prevCommand.MessageID)
@@ -294,7 +307,7 @@ func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbota
 			"",
 			BotCommands[enum.BotCommandNameTypeInputCoeffLimit],
 		))
-		msg, err = keyboard.DrawCoeffKeyboard(msg)
+		msg, err := keyboard.DrawCoeffKeyboard(msg)
 		if err != nil {
 			return errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
 		}
@@ -316,6 +329,23 @@ func (h *handler) ButtonTypeSupplyTypeHandler(ctx context.Context, update tgbota
 
 		return nil
 	}
+
+	err := h.service.ButtonTypeSupplyTypeService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
+	if err != nil {
+		return errors.Wrap(err, "service.ButtonTypeSupplyTypeService")
+	}
+
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
+		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n---------------\n%s",
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.FromDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.ToDate.Format(dto.TimeFormat),
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.WarehouseName,
+		prevCommands[update.CallbackQuery.Message.Chat.ID].Info.CoeffLimit,
+		constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)],
+		"Склад успешно добавлен",
+	))
+
+	// msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен!")
 
 	_, err = h.bot.Send(msg)
 	if err != nil {
@@ -339,8 +369,11 @@ func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) er
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeAddHandler")
 		}
-	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeStop]:
-		break
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeChange]:
+		err := h.BotSlashCommandTypeChangeHandler(ctx, update)
+		if err != nil {
+			return errors.Wrap(err, "BotSlashCommandTypeChangeHandler")
+		}
 	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeCheck]:
 		err := h.BotSlashCommandTypeCheckHandler(ctx, update)
 		if err != nil {
@@ -415,6 +448,24 @@ func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tg
 
 // TODO: add /stop function
 func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update tgbotapi.Update) error {
+	warehouses, err := h.service.BotSlashCommandTypeChange(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.BotSlashCommandTypeChange")
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Выберите отслеживание из списка ниже, чтобы изменить его статус")
+	msg = keyboard.DrawTrackingsKeyboard(msg, warehouses)
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
+		return errors.Wrap(err, "bot.Send")
+	}
+
+	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeChangeStatus,
+		MessageID:   message.MessageID,
+	}
+
 	return nil
 }
 

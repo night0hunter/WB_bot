@@ -16,7 +16,7 @@ func DrawTrackingsKeyboard(msg tgbotapi.MessageConfig, warehouses []dto.Warehous
 	for _, wh := range warehouses {
 		button.Text = constmsg.WarehouseNames[int(wh.Warehouse)] + " " + wh.FromDate.Format(dto.TimeFormat) + "-" + wh.ToDate.Format(dto.TimeFormat)
 		button.Data.Type = enum.ButtonTypeUserTrackings
-		button.Data.Value = int(wh.Warehouse)
+		button.Data.Value = int(wh.TrackingID)
 
 		buttons = append(buttons, button)
 	}

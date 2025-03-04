@@ -18,6 +18,7 @@ const (
 	BotCommandNameTypeInputWarehouse
 	BotCommandNameTypeInputCoeffLimit
 	BotCommandNameTypeInputSupplyType
+	BotCommandNameTypeChangeStatus
 )
 
 type BotSlashCommandType uint8
@@ -25,7 +26,7 @@ type BotSlashCommandType uint8
 const (
 	BotSlashCommandTypeHelp BotSlashCommandType = iota + 1
 	BotSlashCommandTypeAdd
-	BotSlashCommandTypeStop
+	BotSlashCommandTypeChange
 	BotSlashCommandTypeCheck
 )
 

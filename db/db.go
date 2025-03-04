@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"wb_bot/internal/dto"
 
@@ -59,7 +58,8 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 			   warehouse,
 			   coeff_limit,
 			   supply_type,
-			   is_active
+			   is_active,
+			   id
 		FROM supplies
 		WHERE chat_id = (@ChatID)`
 
@@ -75,7 +75,15 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 	warehouses := []dto.WarehouseData{}
 	for rows.Next() {
 		warehouse := dto.WarehouseData{}
-		err := rows.Scan(&warehouse.ChatID, &warehouse.FromDate, &warehouse.ToDate, &warehouse.Warehouse, &warehouse.CoeffLimit, &warehouse.SupplyType, &warehouse.IsActive)
+		err := rows.Scan(
+			&warehouse.ChatID,
+			&warehouse.FromDate,
+			&warehouse.ToDate,
+			&warehouse.Warehouse,
+			&warehouse.CoeffLimit,
+			&warehouse.SupplyType,
+			&warehouse.IsActive,
+			&warehouse.TrackingID)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to scan row")
 		}
@@ -105,12 +113,64 @@ func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) e
 	return nil
 }
 
-func (pg *Postgres) DeleteQuery(ctx context.Context, params dto.WarehouseData) error {
-	query := fmt.Sprintf("DELETE FROM supplies WHERE warehouse=%d", params.Warehouse)
+func (pg *Postgres) InsertTrackingStatus(ctx context.Context, params dto.TrackingStatus) error {
+	query := `INSERT INTO tracking_status (user_id, status) VALUES (@ChatID, @Status)`
+	args := pgx.NamedArgs{
+		"ChatID": params.UserID,
+		"Status": params.Status,
+	}
 
-	_, err := pg.db.Exec(ctx, query)
+	_, err := pg.db.Exec(ctx, query, args)
 	if err != nil {
-		return errors.Wrap(err, "unable to delete row")
+		return errors.Wrap(err, "InsertTrackingStatus: unable to insert row")
+	}
+
+	return nil
+}
+
+// func (pg *Postgres) SelectTrackingStatus(ctx context.Context, chatID int64) error {
+// 	query := `SELECT status FROM tracking_status WHERE user_id=(@ChatID)`
+// 	args := pgx.NamedArgs{
+// 		"ChatID": chatID,
+// 	}
+
+// 	_, err := pg.db.Exec(ctx, query, args)
+// 	if err != nil {
+// 		return errors.Wrap(err, "SelectTrackingStatus: unable to insert row")
+// 	}
+
+// 	return nil
+// }
+
+func (pg *Postgres) SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error) {
+	query := `SELECT is_active FROM supplies WHERE chat_id=(@ChatID) AND id=(@TrackingID)`
+	args := pgx.NamedArgs{
+		"ChatID":     chatID,
+		"TrackingID": trackingID,
+	}
+
+	row := pg.db.QueryRow(ctx, query, args)
+
+	var status bool
+
+	err := row.Scan(&status)
+	if err != nil {
+		return true, errors.Wrap(err, "unable to scan row")
+	}
+
+	return status, nil
+}
+
+func (pg *Postgres) ChangeTrackingStatus(ctx context.Context, trackingID int64, isActive bool) error {
+	query := `UPDATE supplies SET is_active=(@IsActive) WHERE id=(@TrackingID)`
+	args := pgx.NamedArgs{
+		"IsActive":   !isActive,
+		"TrackingID": trackingID,
+	}
+
+	_, err := pg.db.Exec(ctx, query, args)
+	if err != nil {
+		return errors.Wrap(err, "ChangeTrackingStatus")
 	}
 
 	return nil
