@@ -7,7 +7,7 @@ const (
 	ButtonTypeCoeffLimit
 	ButtonTypeSupplyType
 	ButtonTypeUserTrackings
-	ButtonTypeUserTrackingStatus
+	ButtonTypeStop
 )
 
 type BotCommandNameType uint8
@@ -28,6 +28,7 @@ const (
 	BotSlashCommandTypeAdd
 	BotSlashCommandTypeChange
 	BotSlashCommandTypeCheck
+	BotSlashCommandTypeStop
 )
 
 const (

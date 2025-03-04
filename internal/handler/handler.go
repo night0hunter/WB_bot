@@ -11,6 +11,7 @@ import (
 
 	keyboard "wb_bot/internal/handler/keyboard"
 
+	"github.com/davecgh/go-spew/spew"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
 )
@@ -29,6 +30,7 @@ type Service interface {
 	ButtonTypeCoeffLimitService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	ButtonTypeChangeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
+	ButtonTypeStopService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error
 	BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string
 	BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error)
 	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error)
@@ -114,6 +116,36 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update, but
 		if err != nil {
 			return errors.Wrap(err, "ButtonTypeUserTrackingsHandler")
 		}
+	case enum.ButtonTypeStop:
+		err := h.ButtonTypeStopHandler(ctx, update, buttonData)
+		if err != nil {
+			return errors.Wrap(err, "ButtonTypeStopHandler")
+		}
+	}
+
+	return nil
+}
+
+func (h *handler) ButtonTypeStopHandler(ctx context.Context, update tgbotapi.Update, buttonData dto.ButtonData) error {
+	err := h.service.ButtonTypeStopService(ctx, update.CallbackQuery.Message.Chat.ID, buttonData)
+	if err != nil {
+		return errors.Wrap(err, "service.ButtonTypeStopService")
+	}
+
+	prevCommand, ok := prevCommands[update.CallbackQuery.Message.Chat.ID]
+	if ok {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, prevCommand.MessageID)
+		if _, err := h.bot.Send(deleteMsg); err != nil {
+			fmt.Printf("bot.Send(deleteMsg): %s", err.Error())
+		}
+	}
+
+	prevCommands[update.CallbackQuery.Message.Chat.ID] = prevCommandInfo{}
+
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Отслеживание успешно удалено")
+	_, err = h.bot.Send(msg)
+	if err != nil {
+		return errors.Wrap(err, "bot.Send")
 	}
 
 	return nil
@@ -379,6 +411,11 @@ func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) er
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
 		}
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeStop]:
+		err := h.BotSlashCommandTypeStopHandler(ctx, update)
+		if err != nil {
+			return errors.Wrap(err, "BotSlashCommandTypeStopHandler")
+		}
 	default:
 		err := h.BotSlashCommandTypeDefaultHandler(ctx, update)
 		if err != nil {
@@ -446,15 +483,56 @@ func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tg
 	return nil
 }
 
-// TODO: add /stop function
 func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update tgbotapi.Update) error {
 	warehouses, err := h.service.BotSlashCommandTypeChange(ctx, update.Message.Chat.ID)
 	if err != nil {
 		return errors.Wrap(err, "service.BotSlashCommandTypeChange")
 	}
 
+	spew.Dump(warehouses)
+
+	if len(warehouses) == 0 {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент вы не отслеживаете ни одного склада, чтобы добавить, используйте %s", constmsg.BotSlashCommands[enum.BotSlashCommandTypeAdd]))
+		if _, err := h.bot.Send(msg); err != nil {
+			return errors.Wrap(err, "bot.Send")
+		}
+
+		return nil
+	}
+
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Выберите отслеживание из списка ниже, чтобы изменить его статус")
 	msg = keyboard.DrawTrackingsKeyboard(msg, warehouses)
+
+	message, err := h.bot.Send(msg)
+	if err != nil {
+		return errors.Wrap(err, "bot.Send")
+	}
+
+	prevCommands[update.Message.Chat.ID] = prevCommandInfo{
+		CommandName: enum.BotCommandNameTypeChangeStatus,
+		MessageID:   message.MessageID,
+	}
+
+	return nil
+}
+
+func (h *handler) BotSlashCommandTypeStopHandler(ctx context.Context, update tgbotapi.Update) error {
+	warehouses, err := h.service.BotSlashCommandTypeChange(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.BotSlashCommandTypeChange")
+	}
+
+	if len(warehouses) == 0 {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент вы не отслеживаете ни одного склада, чтобы добавить, используйте %s", constmsg.BotSlashCommands[enum.BotSlashCommandTypeAdd]))
+		if _, err := h.bot.Send(msg); err != nil {
+			return errors.Wrap(err, "bot.Send")
+		}
+
+		return nil
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Выберите отслеживание из списка ниже, чтобы удалить его")
+	msg = keyboard.DrawTrackingsDeleteKeyboard(msg, warehouses)
 
 	message, err := h.bot.Send(msg)
 	if err != nil {

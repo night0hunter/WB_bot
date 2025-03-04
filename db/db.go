@@ -95,7 +95,14 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 }
 
 func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) error {
-	query := `INSERT INTO supplies (chat_id, from_date, to_date, Warehouse, coeff_limit, supply_type) VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType)`
+	query := `INSERT INTO supplies (
+					chat_id, 
+					from_date, 
+					to_date, 
+					Warehouse, 
+					coeff_limit, 
+					supply_type) 
+			  VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType)`
 	args := pgx.NamedArgs{
 		"ChatID":     params.ChatID,
 		"FromDate":   params.FromDate,
@@ -165,6 +172,20 @@ func (pg *Postgres) ChangeTrackingStatus(ctx context.Context, trackingID int64, 
 	query := `UPDATE supplies SET is_active=(@IsActive) WHERE id=(@TrackingID)`
 	args := pgx.NamedArgs{
 		"IsActive":   !isActive,
+		"TrackingID": trackingID,
+	}
+
+	_, err := pg.db.Exec(ctx, query, args)
+	if err != nil {
+		return errors.Wrap(err, "ChangeTrackingStatus")
+	}
+
+	return nil
+}
+
+func (pg *Postgres) DeleteTracking(ctx context.Context, trackingID int64) error {
+	query := `DELETE FROM supplies WHERE id=(@TrackingID)`
+	args := pgx.NamedArgs{
 		"TrackingID": trackingID,
 	}
 

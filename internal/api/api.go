@@ -43,11 +43,8 @@ type mergedResp struct {
 }
 
 func GetWarehouseList() []Response {
-	// url := "https://supplies-api-sandbox.wildberries.ru/api/v1/acceptance/coefficients"
 	reqURL := os.Getenv("REQ_URL")
-
-	// var bearer = "Bearer " + "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjQwOTA0djEiLCJ0eXAiOiJKV1QifQ.eyJlbnQiOjEsImV4cCI6MTc0MzIzMTM3MCwiaWQiOiIwMTkyMzRkNy0zMGM5LTc2ZDQtYTUxYy03MDlhZDViZjI0ZGIiLCJpaWQiOjQyNDA0MzM0LCJvaWQiOjEzOTA5MjIsInMiOjAsInNpZCI6IjYyYWMzZjVlLTZkODUtNDNkNy1iNTg0LTlmNjhmNzAwZjk0ZSIsInQiOnRydWUsInVpZCI6NDI0MDQzMzR9.Q9iFktjcoWCPGveWRH2zOwxwYW0tdQShZfVBgP0RzOoar2DiD1sLZU8i8WNf2JcZtt7sNHEbULc0QKfQ-hIs8Q"
-	var bearer = "Bearer " + os.Getenv("BEARER_TOKEN")
+	bearer := "Bearer " + os.Getenv("BEARER_TOKEN")
 
 	client := http.Client{
 		Timeout: time.Second * 2,

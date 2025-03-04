@@ -17,6 +17,7 @@ type Repository interface {
 	InsertTrackingStatus(ctx context.Context, params dto.TrackingStatus) error
 	SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error)
 	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
+	DeleteTracking(ctx context.Context, trackingID int64) error
 }
 
 type Service struct {
@@ -145,6 +146,15 @@ func (s *Service) ButtonTypeChangeService(ctx context.Context, chatID int64, but
 	err = s.Repository.ChangeTrackingStatus(ctx, int64(buttonData.Value), status)
 	if err != nil {
 		return errors.Wrap(err, "Repository.ChangeTrackingStatus")
+	}
+
+	return nil
+}
+
+func (s *Service) ButtonTypeStopService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
+	err := s.Repository.DeleteTracking(ctx, int64(buttonData.Value))
+	if err != nil {
+		return errors.Wrap(err, "Repository.DeleteTracking")
 	}
 
 	return nil
