@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"sync"
+	"time"
 	"wb_bot/internal/dto"
 
 	"github.com/jackc/pgx/v5"
@@ -96,12 +97,12 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 
 func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) error {
 	query := `INSERT INTO supplies (
-					chat_id, 
-					from_date, 
-					to_date, 
-					Warehouse, 
-					coeff_limit, 
-					supply_type) 
+					chat_id,
+					from_date,
+					to_date,
+					Warehouse,
+					coeff_limit,
+					supply_type)
 			  VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType)`
 	args := pgx.NamedArgs{
 		"ChatID":     params.ChatID,
@@ -195,4 +196,51 @@ func (pg *Postgres) DeleteTracking(ctx context.Context, trackingID int64) error 
 	}
 
 	return nil
+}
+
+func (pg *Postgres) JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error) {
+	query := `
+		SELECT chat_id,
+				from_date,
+				to_date,
+				warehouse,
+				coeff_limit,
+				supply_type,
+				is_active
+		FROM supplies
+		WHERE (from_date <= (@DateFrom) AND to_date >= (@DateTo)) OR
+			  (from_date <= (@DateFrom) AND to_date <= (@DateTo)) OR
+			  (from_date >= (@DateFrom) AND to_date <= (@DateTo)) OR
+			  (from_date >= (@DateFrom) AND to_date >= (@DateTo))
+	`
+	args := pgx.NamedArgs{
+		"DateFrom": time.Now(),
+		"DateTo":   date,
+	}
+
+	rows, err := pg.db.Query(ctx, query, args)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to scan row")
+	}
+
+	warehouses := []dto.WarehouseData{}
+	for rows.Next() {
+		warehouse := dto.WarehouseData{}
+		err := rows.Scan(
+			&warehouse.ChatID,
+			&warehouse.FromDate,
+			&warehouse.ToDate,
+			&warehouse.Warehouse,
+			&warehouse.CoeffLimit,
+			&warehouse.SupplyType,
+			&warehouse.IsActive,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to scan row")
+		}
+
+		warehouses = append(warehouses, warehouse)
+	}
+
+	return warehouses, nil
 }

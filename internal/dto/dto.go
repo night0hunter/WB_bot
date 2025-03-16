@@ -22,7 +22,7 @@ type WarehouseData struct {
 	ChatID        int64
 	FromDate      time.Time
 	ToDate        time.Time
-	Warehouse     int64
+	Warehouse     int
 	WarehouseName string
 	CoeffLimit    int
 	SupplyType    string
@@ -44,4 +44,26 @@ type TrackingDate struct {
 type TrackingStatus struct {
 	UserID int64
 	Status int
+}
+
+type MergedResp struct {
+	UserID          int64
+	Date            time.Time
+	Coefficient     int
+	WarehouseID     int
+	WarehouseName   string
+	BoxTypeName     string
+	BoxTypeID       int
+	IsSortingCenter bool
+	IsAvtive        bool
+}
+
+type Response struct {
+	Date            time.Time `json:"date"`
+	Coefficient     int       `json:"coefficient"`
+	WarehouseID     int       `json:"warehouseID"`
+	WarehouseName   string    `json:"warehouseName"`
+	BoxTypeName     string    `json:"boxTypeName"`
+	BoxTypeID       int       `json:"boxTypeId"`
+	IsSortingCenter bool      `json:"isSortingCenter"`
 }

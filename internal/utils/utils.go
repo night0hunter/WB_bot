@@ -18,11 +18,11 @@ const (
 	inactive = "Неактивно"
 )
 
-var moscowLocation *time.Location
+var MoscowLocation *time.Location
 
 func init() {
 	var err error
-	moscowLocation, err = time.LoadLocation(MoscowLocationName)
+	MoscowLocation, err = time.LoadLocation(MoscowLocationName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,12 +35,12 @@ func ParseTimeRange(dateString string) (time.Time, time.Time, error) {
 		return time.Time{}, time.Time{}, errors.New("There must be 2 dates")
 	}
 
-	dateFrom, err := time.ParseInLocation(TimeFormat, datesRaw[0], moscowLocation)
+	dateFrom, err := time.ParseInLocation(TimeFormat, datesRaw[0], MoscowLocation)
 	if err != nil {
 		return time.Time{}, time.Time{}, errors.Wrap(err, "dateFrom: time.ParseInLocation")
 	}
 
-	dateTo, err := time.ParseInLocation(TimeFormat, datesRaw[1], moscowLocation)
+	dateTo, err := time.ParseInLocation(TimeFormat, datesRaw[1], MoscowLocation)
 	if err != nil {
 		return time.Time{}, time.Time{}, errors.Wrap(err, "dateTo: time.ParseInLocation")
 	}

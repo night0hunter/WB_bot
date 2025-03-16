@@ -11,7 +11,6 @@ import (
 
 	keyboard "wb_bot/internal/handler/keyboard"
 
-	"github.com/davecgh/go-spew/spew"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
 )
@@ -36,6 +35,8 @@ type Service interface {
 	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error)
 	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) (int, error)
 	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
+
+	GetTrackings(ctx context.Context) ([]dto.MergedResp, error)
 }
 
 type handler struct {
@@ -489,8 +490,6 @@ func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update t
 		return errors.Wrap(err, "service.BotSlashCommandTypeChange")
 	}
 
-	spew.Dump(warehouses)
-
 	if len(warehouses) == 0 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент вы не отслеживаете ни одного склада, чтобы добавить, используйте %s", constmsg.BotSlashCommands[enum.BotSlashCommandTypeAdd]))
 		if _, err := h.bot.Send(msg); err != nil {
@@ -695,9 +694,10 @@ func (h *handler) BotAnswerInputCoeffLimitHandler(ctx context.Context, update tg
 		CommandName: enum.BotCommandNameTypeInputSupplyType,
 		MessageID:   message.MessageID,
 		Info: dto.WarehouseData{
-			FromDate:   prevCommand.Info.FromDate,
-			ToDate:     prevCommand.Info.ToDate,
-			CoeffLimit: coeff,
+			FromDate:      prevCommand.Info.FromDate,
+			ToDate:        prevCommand.Info.ToDate,
+			WarehouseName: prevCommand.Info.WarehouseName,
+			CoeffLimit:    coeff,
 		},
 	}
 

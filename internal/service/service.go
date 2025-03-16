@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/utils"
@@ -18,6 +19,7 @@ type Repository interface {
 	SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error)
 	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
 	DeleteTracking(ctx context.Context, trackingID int64) error
+	JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error)
 }
 
 type Service struct {
@@ -30,7 +32,7 @@ func NewService(rep Repository) *Service {
 
 func (s *Service) ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
 	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.Warehouse = int64(buttonData.Value)
+	tmpTracking.Warehouse = buttonData.Value
 	dto.Trackings[chatID] = tmpTracking
 
 	return nil
