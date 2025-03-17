@@ -37,6 +37,7 @@ type Service interface {
 	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
 
 	GetTrackings(ctx context.Context) ([]dto.MergedResp, error)
+	KeepSendingTime(ctx context.Context, tracking dto.MergedResp) error
 }
 
 type handler struct {

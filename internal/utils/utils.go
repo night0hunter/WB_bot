@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"wb_bot/internal/dto"
 
 	"github.com/pkg/errors"
 )
@@ -63,4 +64,27 @@ func BoolToActiveRU(input bool) string {
 	}
 
 	return inactive
+}
+
+func SortResponse(response []dto.Response) map[int][]dto.Response {
+	var result = map[int][]dto.Response{}
+
+	for _, rp := range response {
+		if len(result[rp.WarehouseID]) == 0 {
+			result[rp.WarehouseID] = append(result[rp.WarehouseID], rp)
+
+			continue
+		}
+
+		for j := 0; j < len(result[rp.WarehouseID]); j++ {
+			if rp.Date.Before(result[rp.WarehouseID][j].Date) {
+				result[rp.WarehouseID] = append(result[rp.WarehouseID][:j+1], result[rp.WarehouseID][j:]...)
+				result[rp.WarehouseID][j] = rp
+
+				break
+			}
+		}
+	}
+
+	return result
 }

@@ -20,6 +20,7 @@ type Button struct {
 type WarehouseData struct {
 	TrackingID    int64
 	ChatID        int64
+	SendingDate   time.Time
 	FromDate      time.Time
 	ToDate        time.Time
 	Warehouse     int
@@ -47,7 +48,9 @@ type TrackingStatus struct {
 }
 
 type MergedResp struct {
+	TrackingID      int64
 	UserID          int64
+	SendingDate     time.Time
 	Date            time.Time
 	Coefficient     int
 	WarehouseID     int

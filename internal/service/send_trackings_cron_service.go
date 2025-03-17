@@ -7,8 +7,8 @@ import (
 	"time"
 	"wb_bot/internal/api"
 	"wb_bot/internal/dto"
+	"wb_bot/internal/utils"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -21,7 +21,7 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 		return []dto.MergedResp{}, errors.Wrap(err, "api.GetTrackingsList")
 	}
 
-	sortedResponse := sortResponse(response)
+	sortedResponse := utils.SortResponse(response)
 
 	for _, val := range sortedResponse {
 		userTrackings, err = s.Repository.JobSelect(ctx, val[len(val)-1].Date)
@@ -31,8 +31,6 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 
 		break
 	}
-	// spew.Dump(sortedResponse["Коледино"])
-	// userTrackings, err := s.Repository.JobSelect(ctx, sortedResponse["Коледино"][len(sortedResponse["Коледино"])-1].Date)
 
 	for _, tr := range userTrackings {
 		for j := 0; j < len(sortedResponse[tr.Warehouse]); j++ {
@@ -52,7 +50,12 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 				continue
 			}
 
+			if tr.SendingDate.Add(time.Minute * 5).After(time.Now()) {
+				continue
+			}
+
 			tmp := dto.MergedResp{
+				TrackingID:      tr.TrackingID,
 				UserID:          tr.ChatID,
 				Date:            sortedResponse[tr.Warehouse][j].Date,
 				Coefficient:     sortedResponse[tr.Warehouse][j].Coefficient,
@@ -68,30 +71,14 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 		}
 	}
 
-	spew.Dump(result)
-
 	return result, nil
 }
 
-func sortResponse(response []dto.Response) map[int][]dto.Response {
-	var result = map[int][]dto.Response{}
-
-	for _, rp := range response {
-		if len(result[rp.WarehouseID]) == 0 {
-			result[rp.WarehouseID] = append(result[rp.WarehouseID], rp)
-
-			continue
-		}
-
-		for j := 0; j < len(result[rp.WarehouseID]); j++ {
-			if rp.Date.Before(result[rp.WarehouseID][j].Date) {
-				result[rp.WarehouseID] = append(result[rp.WarehouseID][:j+1], result[rp.WarehouseID][j:]...)
-				result[rp.WarehouseID][j] = rp
-
-				break
-			}
-		}
+func (s *Service) KeepSendingTime(ctx context.Context, tracking dto.MergedResp) error {
+	err := s.Repository.UpdateSendingTime(ctx, time.Now(), tracking.TrackingID)
+	if err != nil {
+		return errors.Wrap(err, "Repository.UpdateSendingDate")
 	}
 
-	return result
+	return nil
 }

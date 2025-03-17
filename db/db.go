@@ -102,15 +102,17 @@ func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) e
 					to_date,
 					Warehouse,
 					coeff_limit,
-					supply_type)
-			  VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType)`
+					supply_type,
+					tracking_date)
+			  VALUES (@ChatID, @FromDate, @ToDate, @Warehouse, @CoeffLimit, @SupplyType, @TrackingDate)`
 	args := pgx.NamedArgs{
-		"ChatID":     params.ChatID,
-		"FromDate":   params.FromDate,
-		"ToDate":     params.ToDate,
-		"Warehouse":  params.Warehouse,
-		"CoeffLimit": params.CoeffLimit,
-		"SupplyType": params.SupplyType,
+		"ChatID":       params.ChatID,
+		"FromDate":     params.FromDate,
+		"ToDate":       params.ToDate,
+		"Warehouse":    params.Warehouse,
+		"CoeffLimit":   params.CoeffLimit,
+		"SupplyType":   params.SupplyType,
+		"TrackingDate": time.Now().Add(-time.Minute * 5),
 	}
 
 	_, err := pg.db.Exec(ctx, query, args)
@@ -206,7 +208,9 @@ func (pg *Postgres) JobSelect(ctx context.Context, date time.Time) ([]dto.Wareho
 				warehouse,
 				coeff_limit,
 				supply_type,
-				is_active
+				is_active,
+				id,
+				tracking_date
 		FROM supplies
 		WHERE (from_date <= (@DateFrom) AND to_date >= (@DateTo)) OR
 			  (from_date <= (@DateFrom) AND to_date <= (@DateTo)) OR
@@ -234,6 +238,8 @@ func (pg *Postgres) JobSelect(ctx context.Context, date time.Time) ([]dto.Wareho
 			&warehouse.CoeffLimit,
 			&warehouse.SupplyType,
 			&warehouse.IsActive,
+			&warehouse.TrackingID,
+			&warehouse.SendingDate,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to scan row")
@@ -243,4 +249,19 @@ func (pg *Postgres) JobSelect(ctx context.Context, date time.Time) ([]dto.Wareho
 	}
 
 	return warehouses, nil
+}
+
+func (pg *Postgres) UpdateSendingTime(ctx context.Context, date time.Time, id int64) error {
+	query := `UPDATE supplies SET tracking_date = (@Date) WHERE id = (@ID)`
+	args := pgx.NamedArgs{
+		"Date": date,
+		"ID":   id,
+	}
+
+	_, err := pg.db.Exec(ctx, query, args)
+	if err != nil {
+		return errors.Wrap(err, "UpdateSendingDate")
+	}
+
+	return nil
 }

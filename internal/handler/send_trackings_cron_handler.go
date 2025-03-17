@@ -37,6 +37,11 @@ func (h *handler) TrackingCron(ctx context.Context) error {
 			return errors.Wrap(err, "bot.Send")
 		}
 
+		err = h.service.KeepSendingTime(ctx, tr)
+		if err != nil {
+			return errors.Wrap(err, "service.KeepSendingTime")
+		}
+
 		return nil
 	}
 

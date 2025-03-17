@@ -20,6 +20,7 @@ type Repository interface {
 	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
 	DeleteTracking(ctx context.Context, trackingID int64) error
 	JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error)
+	UpdateSendingTime(ctx context.Context, date time.Time, id int64) error
 }
 
 type Service struct {
