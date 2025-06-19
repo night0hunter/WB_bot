@@ -30,12 +30,10 @@ type WarehouseData struct {
 	IsActive      bool
 }
 
-// type WarehouseDataExt struct {
-// 	WarehouseData
-// 	WarehouseName string
-// }
-
-var Trackings = map[int64]WarehouseData{}
+type ChangeStatusInfo struct {
+	TrackingID int64
+	Choice     int
+}
 
 type TrackingDate struct {
 	DateFrom time.Time
@@ -45,6 +43,10 @@ type TrackingDate struct {
 type TrackingStatus struct {
 	UserID int64
 	Status int
+}
+
+type KeyboardData struct {
+	Warehouses []WarehouseData
 }
 
 type MergedResp struct {

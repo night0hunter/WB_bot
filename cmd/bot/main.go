@@ -43,20 +43,22 @@ func main() {
 		log.Fatalf("db.NewPG: %s", err)
 	}
 
-	fmt.Printf("Base has been started on port %s\n", port)
+	fmt.Printf("Database has been started on port %s\n", port)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
 	if err != nil {
 		log.Fatalf("tgbotapi.NewBotAPI: %s", err)
 	}
 
-	fmt.Printf("Bot has been started")
+	fmt.Printf("Bot has been started\n")
 
 	service := service.NewService(dbpool)
 
-	handler := handler.NewHandler(bot, service)
+	h := handler.New(bot, service)
+	// handler := handler.NewHandler(bot, service)
 
-	err = handler.Run(ctx)
+	err = h.Run(ctx)
+	// err = handler.Run(ctx)
 	if err != nil {
 		fmt.Printf("handler.Run: %s", err.Error())
 	}

@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
@@ -31,50 +31,11 @@ func NewService(rep Repository) *Service {
 	return &Service{Repository: rep}
 }
 
-func (s *Service) ButtonTypeWarehouseService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
-	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.Warehouse = buttonData.Value
-	dto.Trackings[chatID] = tmpTracking
-
-	return nil
-}
-
-func (s *Service) ButtonTypeCoeffLimitService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
-	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.CoeffLimit = buttonData.Value
-	dto.Trackings[chatID] = tmpTracking
-
-	return nil
-}
-
-func (s *Service) ButtonTypeSupplyTypeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
-	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.SupplyType = strconv.Itoa(buttonData.Value)
-	dto.Trackings[chatID] = tmpTracking
-
-	err := s.Repository.InsertQuery(ctx, dto.Trackings[chatID])
-	if err != nil {
-		return errors.Wrap(err, "Repository.InsertQuery")
-	}
-
-	return nil
-}
-
 func (s *Service) BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error) {
 	dateFrom, dateTo, err := utils.ParseTimeRange(date)
 	if err != nil {
 		return dto.TrackingDate{}, errors.Wrap(err, "utils.ParseTimeRange")
 	}
-
-	// usersMutex.Lock()
-	dto.Trackings[chatID] = dto.WarehouseData{ChatID: chatID}
-	// usersMutex.Unlock()
-
-	tmpTracking := dto.Trackings[chatID]
-
-	tmpTracking.FromDate = dateFrom
-	tmpTracking.ToDate = dateTo
-	dto.Trackings[chatID] = tmpTracking
 
 	return dto.TrackingDate{
 		DateFrom: dateFrom,
@@ -87,10 +48,6 @@ func (s *Service) BotAnswerInputCoeffLimitService(ctx context.Context, chatID in
 	if err != nil {
 		return 0, errors.Wrap(err, "utils.ParseCoeffLimit")
 	}
-
-	tmpTracking := dto.Trackings[chatID]
-	tmpTracking.CoeffLimit = parsedCoeff
-	dto.Trackings[chatID] = tmpTracking
 
 	return parsedCoeff, nil
 }
@@ -112,7 +69,7 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 				wh.FromDate.Format(dto.TimeFormat),
 				wh.ToDate.Format(dto.TimeFormat),
 				wh.CoeffLimit,
-				constmsg.SupplyTypes[wh.SupplyType],
+				wh.SupplyType,
 				utils.BoolToActiveRU(wh.IsActive),
 			),
 		)
@@ -140,13 +97,13 @@ func (s *Service) BotSlashCommandTypeChange(ctx context.Context, chatID int64) (
 	return warehouses, nil
 }
 
-func (s *Service) ButtonTypeChangeService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
-	status, err := s.Repository.SelectTrackingStatus(ctx, chatID, int64(buttonData.Value))
+func (s *Service) ChangeStatusService(ctx context.Context, chatID, trackingID int64) error {
+	status, err := s.Repository.SelectTrackingStatus(ctx, chatID, trackingID)
 	if err != nil {
 		return errors.Wrap(err, "Repository.SelectTrackingStatus")
 	}
 
-	err = s.Repository.ChangeTrackingStatus(ctx, int64(buttonData.Value), status)
+	err = s.Repository.ChangeTrackingStatus(ctx, trackingID, status)
 	if err != nil {
 		return errors.Wrap(err, "Repository.ChangeTrackingStatus")
 	}
@@ -154,10 +111,25 @@ func (s *Service) ButtonTypeChangeService(ctx context.Context, chatID int64, but
 	return nil
 }
 
-func (s *Service) ButtonTypeStopService(ctx context.Context, chatID int64, buttonData dto.ButtonData) error {
-	err := s.Repository.DeleteTracking(ctx, int64(buttonData.Value))
+func (s *Service) DeleteTrackingService(ctx context.Context, chatID int64, trackingID int64) error {
+	err := s.Repository.DeleteTracking(ctx, trackingID)
 	if err != nil {
 		return errors.Wrap(err, "Repository.DeleteTracking")
+	}
+
+	return nil
+}
+
+func (s *Service) AddSequenceEndService(ctx context.Context, chatID int64, data []byte) error {
+	var unmarshData dto.WarehouseData
+	err := json.Unmarshal(data, &unmarshData)
+	if err != nil {
+		return errors.Wrap(err, "json.Unmarshal")
+	}
+
+	err = s.Repository.InsertQuery(ctx, unmarshData)
+	if err != nil {
+		return errors.Wrap(err, "Repository.InsertQuery")
 	}
 
 	return nil

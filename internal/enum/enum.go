@@ -6,19 +6,32 @@ const (
 	ButtonTypeWarehouse ButtonType = iota + 1
 	ButtonTypeCoeffLimit
 	ButtonTypeSupplyType
-	ButtonTypeUserTrackings
-	ButtonTypeStop
+	ButtonTypeUserTrackingChoice
+	ButtonTypeActionChoice
 )
 
-type BotCommandNameType uint8
+type Sequences uint8
 
 const (
-	BotCommandNameTypeUnknown BotCommandNameType = iota
+	Add Sequences = iota + 1
+	Change
+)
+
+type CommandSequences uint8
+
+const (
+	BotCommandNameTypeUnknown CommandSequences = iota
+	BotCommandNameTypeAdd
 	BotCommandNameTypeInputDate
 	BotCommandNameTypeInputWarehouse
 	BotCommandNameTypeInputCoeffLimit
 	BotCommandNameTypeInputSupplyType
-	BotCommandNameTypeChangeStatus
+)
+
+const (
+	BotCommandNameTypeChange CommandSequences = iota + 6
+	BotCommandNameTypeTracking
+	BotCommandNameTypeAction
 )
 
 type BotSlashCommandType uint8
