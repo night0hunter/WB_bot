@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"time"
 	"wb_bot/internal/api"
 	"wb_bot/internal/dto"
@@ -42,7 +41,7 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 				continue
 			}
 
-			if tr.SupplyType != strconv.Itoa(sortedResponse[tr.Warehouse][j].BoxTypeID) {
+			if tr.SupplyType != sortedResponse[tr.Warehouse][j].BoxTypeName {
 				continue
 			}
 
@@ -64,7 +63,7 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 				BoxTypeName:     sortedResponse[tr.Warehouse][j].BoxTypeName,
 				BoxTypeID:       sortedResponse[tr.Warehouse][j].BoxTypeID,
 				IsSortingCenter: sortedResponse[tr.Warehouse][j].IsSortingCenter,
-				IsAvtive:        tr.IsActive,
+				IsActive:        tr.IsActive,
 			}
 
 			result = append(result, tmp)

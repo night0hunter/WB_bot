@@ -62,7 +62,8 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 			   is_active,
 			   id
 		FROM supplies
-		WHERE chat_id = (@ChatID)`
+		WHERE chat_id = (@ChatID) 
+		ORDER BY from_date ASC`
 
 	args := pgx.NamedArgs{
 		"ChatID": ChatID,
@@ -122,35 +123,6 @@ func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) e
 
 	return nil
 }
-
-func (pg *Postgres) InsertTrackingStatus(ctx context.Context, params dto.TrackingStatus) error {
-	query := `INSERT INTO tracking_status (user_id, status) VALUES (@ChatID, @Status)`
-	args := pgx.NamedArgs{
-		"ChatID": params.UserID,
-		"Status": params.Status,
-	}
-
-	_, err := pg.db.Exec(ctx, query, args)
-	if err != nil {
-		return errors.Wrap(err, "InsertTrackingStatus: unable to insert row")
-	}
-
-	return nil
-}
-
-// func (pg *Postgres) SelectTrackingStatus(ctx context.Context, chatID int64) error {
-// 	query := `SELECT status FROM tracking_status WHERE user_id=(@ChatID)`
-// 	args := pgx.NamedArgs{
-// 		"ChatID": chatID,
-// 	}
-
-// 	_, err := pg.db.Exec(ctx, query, args)
-// 	if err != nil {
-// 		return errors.Wrap(err, "SelectTrackingStatus: unable to insert row")
-// 	}
-
-// 	return nil
-// }
 
 func (pg *Postgres) SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error) {
 	query := `SELECT is_active FROM supplies WHERE chat_id=(@ChatID) AND id=(@TrackingID)`

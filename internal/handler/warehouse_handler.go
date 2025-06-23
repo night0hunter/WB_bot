@@ -19,7 +19,7 @@ type WarehouseHandler struct {
 	commandName enum.CommandSequences
 }
 
-func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
@@ -66,7 +66,7 @@ func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update,
 	return tmpData, nil
 }
 
-func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	if update.CallbackQuery == nil && update.Message == nil {
 		return tmpData, nil
 	}

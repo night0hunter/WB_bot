@@ -15,12 +15,16 @@ import (
 type Repository interface {
 	SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error)
 	InsertQuery(ctx context.Context, params dto.WarehouseData) error
-	InsertTrackingStatus(ctx context.Context, params dto.TrackingStatus) error
 	SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error)
 	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
 	DeleteTracking(ctx context.Context, trackingID int64) error
 	JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error)
 	UpdateSendingTime(ctx context.Context, date time.Time, id int64) error
+
+	SelectState(ctx context.Context, id int64) (dto.PrevCommandInfo, error)
+	UpdateState(ctx context.Context, id int64, prevCommand dto.PrevCommandInfo) error
+	InsertState(ctx context.Context, id int64, prevCommand dto.PrevCommandInfo) error
+	DeleteState(ctx context.Context, id int64) error
 }
 
 type Service struct {
@@ -130,6 +134,42 @@ func (s *Service) AddSequenceEndService(ctx context.Context, chatID int64, data 
 	err = s.Repository.InsertQuery(ctx, unmarshData)
 	if err != nil {
 		return errors.Wrap(err, "Repository.InsertQuery")
+	}
+
+	return nil
+}
+
+func (s *Service) SelectState(ctx context.Context, chatID int64) (dto.PrevCommandInfo, error) {
+	prevCommand, err := s.Repository.SelectState(ctx, chatID)
+	if err != nil {
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "Repository.SelectState")
+	}
+
+	return prevCommand, nil
+}
+
+func (s *Service) InsertState(ctx context.Context, chatID int64, prevCommand dto.PrevCommandInfo) error {
+	err := s.Repository.InsertState(ctx, chatID, prevCommand)
+	if err != nil {
+		return errors.Wrap(err, "Repository.InsertState")
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateState(ctx context.Context, chatID int64, prevCommand dto.PrevCommandInfo) error {
+	err := s.Repository.UpdateState(ctx, chatID, prevCommand)
+	if err != nil {
+		return errors.Wrap(err, "Repository.UpdateState")
+	}
+
+	return nil
+}
+
+func (s *Service) DeleteState(ctx context.Context, chatID int64) error {
+	err := s.Repository.DeleteState(ctx, chatID)
+	if err != nil {
+		return errors.Wrap(err, "Repository.DeleteState")
 	}
 
 	return nil

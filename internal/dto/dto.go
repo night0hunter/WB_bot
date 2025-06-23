@@ -7,6 +7,14 @@ import (
 
 const TimeFormat = "02.01.2006"
 
+type PrevCommandInfo struct {
+	SequenceName enum.Sequences
+	CommandName  enum.CommandSequences
+	MessageID    int
+	Info         []byte
+	KeyboardInfo []byte
+}
+
 type ButtonData struct {
 	Type  enum.ButtonType
 	Value int
@@ -60,7 +68,7 @@ type MergedResp struct {
 	BoxTypeName     string
 	BoxTypeID       int
 	IsSortingCenter bool
-	IsAvtive        bool
+	IsActive        bool
 }
 
 type Response struct {

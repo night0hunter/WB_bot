@@ -20,10 +20,11 @@ var BotSlashCommandsHelp = map[string]string{
 }
 
 var MatchErrorType = map[myError.ErrorType]string{
-	myError.DateInputError:      "Дата введена неверно, попробуйте ещё раз - формат: дд.мм.гггг-дд.мм.гггг",
-	myError.WarehouseInputError: "Выберите склад из списка",
-	myError.CoeffInputError:     "Лимит коэффициента введён неверно, попробуйте ещё раз",
-	myError.SupplyTypeError:     "Выберите тип поставки из списка",
-	myError.TrackingChoiceError: "Выберите отслеживание из списка",
-	myError.ActionChoiceError:   "Выберите действие из списка",
+	myError.DateInputError:        "Дата введена неверно, попробуйте ещё раз - формат: дд.мм.гггг-дд.мм.гггг",
+	myError.WarehouseInputError:   "Выберите склад из списка",
+	myError.CoeffInputError:       "Лимит коэффициента введён неверно, попробуйте ещё раз",
+	myError.SupplyTypeError:       "Выберите тип поставки из списка",
+	myError.TrackingChoiceError:   "Выберите отслеживание из списка",
+	myError.ActionChoiceError:     "Выберите действие из списка",
+	myError.SaveStatusChoiceError: "Выберите действие из списка",
 }

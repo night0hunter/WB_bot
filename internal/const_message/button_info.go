@@ -3,8 +3,8 @@ package constmsg
 import "wb_bot/internal/enum"
 
 var SupplyTypes = map[string]string{
-	enum.Box:        "Короб",
-	enum.Monopallet: "Монопалета",
+	enum.Box:        "Короба",
+	enum.Monopallet: "Монопаллеты",
 	enum.SuperSafe:  "Суперсейф",
 }
 

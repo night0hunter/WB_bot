@@ -19,21 +19,21 @@ type CoeffLimitHandler struct {
 	commandName enum.CommandSequences
 }
 
-func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	if update.CallbackQuery == nil {
 		return tmpData, nil
 	}
 
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "Unmarshal")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "Unmarshal")
 	}
 
 	var buttonData dto.ButtonData
 
 	err = json.Unmarshal([]byte(update.CallbackQuery.Data), &buttonData)
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "json.Unmarshal")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "json.Unmarshal")
 	}
 
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
@@ -48,12 +48,12 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 
 	msg, err = keyboard.DrawCoeffKeyboard(msg, dto.KeyboardData{})
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
 	}
 
 	message, err := h.bot.Send(msg)
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "bot.Send")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "bot.Send")
 	}
 
 	tmpData.MessageID = message.MessageID
@@ -61,7 +61,7 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 	return tmpData, nil
 }
 
-func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")

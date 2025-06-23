@@ -22,7 +22,7 @@ func (h *handler2) TrackingCron(ctx context.Context) error {
 	}
 
 	for _, tr := range trackings {
-		if !tr.IsAvtive {
+		if !tr.IsActive {
 			continue
 		}
 

@@ -45,7 +45,7 @@ func GetTrackingsList(ctx context.Context, client http.Client) ([]dto.Response, 
 
 	var sortedResp []dto.Response
 	for _, wh := range resp {
-		if wh.BoxTypeID == 2 {
+		if (wh.BoxTypeID == 2 || wh.BoxTypeID == 5) && wh.Coefficient != -1 {
 			sortedResp = append(sortedResp, wh)
 		}
 	}

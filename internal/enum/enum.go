@@ -8,6 +8,7 @@ const (
 	ButtonTypeSupplyType
 	ButtonTypeUserTrackingChoice
 	ButtonTypeActionChoice
+	ButtonTypeSaveStatus
 )
 
 type Sequences uint8
@@ -20,16 +21,17 @@ const (
 type CommandSequences uint8
 
 const (
+	// add sequence
 	BotCommandNameTypeUnknown CommandSequences = iota
 	BotCommandNameTypeAdd
 	BotCommandNameTypeInputDate
 	BotCommandNameTypeInputWarehouse
 	BotCommandNameTypeInputCoeffLimit
 	BotCommandNameTypeInputSupplyType
-)
+	BotCommandNameTypeSaveStatus
 
-const (
-	BotCommandNameTypeChange CommandSequences = iota + 6
+	// change sequence
+	BotCommandNameTypeChange
 	BotCommandNameTypeTracking
 	BotCommandNameTypeAction
 )

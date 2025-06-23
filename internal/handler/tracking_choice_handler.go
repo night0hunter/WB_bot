@@ -20,7 +20,7 @@ type TrackingChoiceHandler struct {
 	commandName enum.CommandSequences
 }
 
-func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var warehouses []dto.WarehouseData
 	var err error
 
@@ -80,7 +80,7 @@ func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Up
 	return tmpData, nil
 }
 
-func (h *TrackingChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *TrackingChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	if update.CallbackQuery == nil && update.Message == nil {
 		return tmpData, nil
 	}

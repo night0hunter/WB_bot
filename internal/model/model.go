@@ -16,4 +16,6 @@ var CommandToKeyboard = map[enum.CommandSequences]func(msg tgbotapi.MessageConfi
 	enum.BotCommandNameTypeChange:          keyboard.DrawCancelKeyboard,
 	enum.BotCommandNameTypeTracking:        keyboard.DrawTrackingsKeyboard,
 	enum.BotCommandNameTypeAction:          keyboard.DrawActionChoiceKeyboard,
+
+	enum.BotCommandNameTypeSaveStatus: keyboard.DrawSaveStatusKeyboard,
 }

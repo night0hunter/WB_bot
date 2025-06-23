@@ -21,7 +21,7 @@ type SupplyTypeHandler struct {
 	commandName enum.CommandSequences
 }
 
-func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
@@ -69,7 +69,7 @@ func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update
 	return tmpData, nil
 }
 
-func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")

@@ -3,12 +3,14 @@ package myError
 type ErrorType int
 
 const (
-	DateInputError ErrorType = iota + 1
+	DefaultError ErrorType = iota
+	DateInputError
 	WarehouseInputError
 	CoeffInputError
 	SupplyTypeError
 	TrackingChoiceError
 	ActionChoiceError
+	SaveStatusChoiceError
 )
 
 type MyError struct {

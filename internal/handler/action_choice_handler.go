@@ -18,7 +18,7 @@ type ActionChoiceHandler struct {
 	commandName enum.CommandSequences
 }
 
-func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var err error
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Выберите действие")
 	msg, err = keyboard.DrawActionChoiceKeyboard(msg, dto.KeyboardData{})
@@ -36,7 +36,7 @@ func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Upda
 	return tmpData, nil
 }
 
-func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	if update.Message != nil {
 		return tmpData, &myError.MyError{
 			ErrType: myError.ActionChoiceError,

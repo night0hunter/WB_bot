@@ -17,7 +17,7 @@ type InputDateHandler struct {
 	commandName enum.CommandSequences
 }
 
-func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 	var data dto.WarehouseData
 	var err error
@@ -25,7 +25,7 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 	if tmpData.Info != nil {
 		data, err = Unmarshal[dto.WarehouseData](tmpData.Info)
 		if err != nil {
-			return prevCommandInfo{}, errors.Wrap(err, "Unmarshal")
+			return dto.PrevCommandInfo{}, errors.Wrap(err, "Unmarshal")
 		}
 	}
 
@@ -41,18 +41,18 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 
 	msg, err = keyboard.DrawCancelKeyboard(msg, dto.KeyboardData{})
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCancelKeyboard")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCancelKeyboard")
 	}
 
 	message, err := h.bot.Send(msg)
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "bot.Send")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "bot.Send")
 	}
 
 	tmpData.MessageID = message.MessageID
 	json, err := Marshal(data)
 	if err != nil {
-		return prevCommandInfo{}, errors.Wrap(err, "Marshal")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "Marshal")
 	}
 
 	tmpData.Info = json
@@ -60,7 +60,7 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 	return tmpData, nil
 }
 
-func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData prevCommandInfo) (prevCommandInfo, error) {
+func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")
