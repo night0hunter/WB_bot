@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
@@ -18,39 +17,23 @@ import (
 type SupplyTypeHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
-	commandName enum.CommandSequences
+	commandName enum.CommandSequence
 }
 
 func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+	text, err := SequenceController(tmpData, h.GetCommandName())
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "SequenceController")
 	}
 
 	if update.Message != nil {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf(
-			"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
-			data.FromDate.Format(dto.TimeFormat),
-			data.ToDate.Format(dto.TimeFormat),
-			constmsg.WarehouseNames[data.Warehouse],
-			data.CoeffLimit,
-			"",
-			BotCommands[enum.BotCommandNameTypeInputSupplyType],
-		))
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	}
 
 	if update.CallbackQuery != nil {
-		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-			"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n%s",
-			data.FromDate.Format(dto.TimeFormat),
-			data.ToDate.Format(dto.TimeFormat),
-			constmsg.WarehouseNames[data.Warehouse],
-			data.CoeffLimit,
-			"",
-			BotCommands[enum.BotCommandNameTypeInputSupplyType],
-		))
+		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
 	// msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
@@ -92,19 +75,6 @@ func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 
 	data.SupplyType = constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)]
 
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-		"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %dx и меньше\nТип поставки: %s\n---------------\n",
-		data.FromDate.Format(dto.TimeFormat),
-		data.ToDate.Format(dto.TimeFormat),
-		constmsg.WarehouseNames[data.Warehouse],
-		data.CoeffLimit,
-		constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)],
-	))
-
-	if _, err = h.bot.Send(msg); err != nil {
-		return tmpData, errors.Wrap(err, "bot.Send")
-	}
-
 	json, err := Marshal(data)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Marshal")
@@ -115,6 +85,6 @@ func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 	return tmpData, nil
 }
 
-func (h *SupplyTypeHandler) GetCommandName() enum.CommandSequences {
+func (h *SupplyTypeHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

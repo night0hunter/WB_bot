@@ -15,22 +15,19 @@ import (
 type SaveStatusHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
-	commandName enum.CommandSequences
+	commandName enum.CommandSequence
 }
 
 func (h *SaveStatusHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
-	var data dto.WarehouseData
 	var err error
 
 	if update.Message != nil {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Вы уже начинали добавлять отслеживание, выберите действие")
-		data.ChatID = update.Message.Chat.ID
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Вы уже начинали заполнение, выберите действие")
 	}
 
 	if update.CallbackQuery != nil {
-		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Вы уже начинали добавлять отслеживание, выберите действие")
-		data.ChatID = update.CallbackQuery.Message.Chat.ID
+		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Вы уже начинали заполнение, выберите действие")
 	}
 
 	msg, err = keyboard.DrawSaveStatusKeyboard(msg, dto.KeyboardData{})
@@ -87,6 +84,6 @@ func (h *SaveStatusHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 	return tmpData, nil
 }
 
-func (h *SaveStatusHandler) GetCommandName() enum.CommandSequences {
+func (h *SaveStatusHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

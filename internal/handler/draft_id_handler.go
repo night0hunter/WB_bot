@@ -4,41 +4,46 @@ import (
 	"context"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
-	"wb_bot/internal/handler/keyboard"
+	myError "wb_bot/internal/error"
+	keyboard "wb_bot/internal/handler/keyboard"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
-type InputDateHandler struct {
+type DraftIdHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
 	commandName enum.CommandSequence
 }
 
-func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+func (h *DraftIdHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
-	var data dto.WarehouseData
+	var data dto.BookingData
 	var err error
 
 	if tmpData.Info != nil {
-		data, err = Unmarshal[dto.WarehouseData](tmpData.Info)
+		data, err = Unmarshal[dto.BookingData](tmpData.Info)
 		if err != nil {
 			return dto.PrevCommandInfo{}, errors.Wrap(err, "Unmarshal")
 		}
 	}
 
+	text, err := SequenceController(tmpData, h.GetCommandName())
+	if err != nil {
+		return tmpData, errors.Wrap(err, "SequenceController")
+	}
+
 	if update.Message != nil {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
-		data.ChatID = update.Message.Chat.ID
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	}
 
 	if update.CallbackQuery != nil {
-		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
-		data.ChatID = update.CallbackQuery.Message.Chat.ID
+		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
-	msg, err = keyboard.DrawCancelKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawBackKeyboard(msg, dto.KeyboardData{})
 	if err != nil {
 		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCancelKeyboard")
 	}
@@ -59,8 +64,8 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 	return tmpData, nil
 }
 
-func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+func (h *DraftIdHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+	data, err := Unmarshal[dto.BookingData](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")
 	}
@@ -69,13 +74,15 @@ func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, t
 		return tmpData, nil
 	}
 
-	timeRange, err := h.service.BotAnswerInputDateService(ctx, update.Message.Chat.ID, update.Message.Text)
+	id, err := uuid.Parse(update.Message.Text)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "service.BotAnswerInputDateService")
+		return tmpData, &myError.MyError{
+			ErrType: myError.BookingIdError,
+			Message: "uuid.Parse: bookingID - user input error",
+		}
 	}
 
-	data.FromDate = timeRange.DateFrom
-	data.ToDate = timeRange.DateTo
+	data.DraftID = id
 
 	json, err := Marshal(data)
 	if err != nil {
@@ -87,6 +94,6 @@ func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, t
 	return tmpData, nil
 }
 
-func (h *InputDateHandler) GetCommandName() enum.CommandSequence {
+func (h *DraftIdHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

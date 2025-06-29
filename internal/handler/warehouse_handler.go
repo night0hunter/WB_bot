@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
@@ -16,39 +15,23 @@ import (
 type WarehouseHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
-	commandName enum.CommandSequences
+	commandName enum.CommandSequence
 }
 
 func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+	text, err := SequenceController(tmpData, h.GetCommandName())
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "SequenceController")
 	}
 
 	if update.Message != nil {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf(
-			"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n---------------\n%s",
-			data.FromDate.Format(dto.TimeFormat),
-			data.ToDate.Format(dto.TimeFormat),
-			"",
-			"",
-			"",
-			BotCommands[enum.BotCommandNameTypeInputWarehouse],
-		))
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 	}
 
 	if update.CallbackQuery != nil {
-		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(
-			"Дата отслеживания: %s-%s\nСклад: %s\nЛимит коэффициента: %s\nТип поставки: %s\n---------------\n%s",
-			data.FromDate.Format(dto.TimeFormat),
-			data.ToDate.Format(dto.TimeFormat),
-			"",
-			"",
-			"",
-			BotCommands[enum.BotCommandNameTypeInputWarehouse],
-		))
+		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
 	msg, err = keyboard.DrawWarehouseKeyboard(msg, dto.KeyboardData{})
@@ -67,10 +50,6 @@ func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update,
 }
 
 func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	if update.CallbackQuery == nil && update.Message == nil {
-		return tmpData, nil
-	}
-
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")
@@ -105,6 +84,6 @@ func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, t
 	return tmpData, nil
 }
 
-func (h *WarehouseHandler) GetCommandName() enum.CommandSequences {
+func (h *WarehouseHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

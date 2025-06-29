@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *handler2) TrackingCron(ctx context.Context) error {
+func (h *handler) TrackingCron(ctx context.Context) error {
 	var msg tgbotapi.MessageConfig
 
 	trackings, err := h.service.GetTrackings(ctx)

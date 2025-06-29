@@ -9,6 +9,7 @@ const (
 	ButtonTypeUserTrackingChoice
 	ButtonTypeActionChoice
 	ButtonTypeSaveStatus
+	ButtonTypeBookProtection
 )
 
 type Sequences uint8
@@ -16,24 +17,32 @@ type Sequences uint8
 const (
 	Add Sequences = iota + 1
 	Change
+	Booking
 )
 
-type CommandSequences uint8
+type CommandSequence uint8
 
 const (
 	// add sequence
-	BotCommandNameTypeUnknown CommandSequences = iota
+	BotCommandNameTypeUnknown CommandSequence = iota
 	BotCommandNameTypeAdd
 	BotCommandNameTypeInputDate
 	BotCommandNameTypeInputWarehouse
 	BotCommandNameTypeInputCoeffLimit
 	BotCommandNameTypeInputSupplyType
-	BotCommandNameTypeSaveStatus
 
 	// change sequence
 	BotCommandNameTypeChange
 	BotCommandNameTypeTracking
 	BotCommandNameTypeAction
+
+	// booking sequence
+	BotCommandNameTypeBook
+	BotCommandNameTypeDraftID
+	BotCommandNameTypeBookProtection
+
+	// universal command
+	BotCommandNameTypeSaveStatus
 )
 
 type BotSlashCommandType uint8
@@ -44,6 +53,7 @@ const (
 	BotSlashCommandTypeChange
 	BotSlashCommandTypeCheck
 	BotSlashCommandTypeStop
+	BotSlashCommandTypeBook
 )
 
 const (

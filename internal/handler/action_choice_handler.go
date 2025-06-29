@@ -15,7 +15,7 @@ import (
 type ActionChoiceHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
-	commandName enum.CommandSequences
+	commandName enum.CommandSequence
 }
 
 func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
@@ -83,6 +83,6 @@ func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update
 	return tmpData, nil
 }
 
-func (h *ActionChoiceHandler) GetCommandName() enum.CommandSequences {
+func (h *ActionChoiceHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

@@ -3,13 +3,15 @@ package dto
 import (
 	"time"
 	"wb_bot/internal/enum"
+
+	uuid "github.com/google/uuid"
 )
 
 const TimeFormat = "02.01.2006"
 
 type PrevCommandInfo struct {
 	SequenceName enum.Sequences
-	CommandName  enum.CommandSequences
+	CommandName  enum.CommandSequence
 	MessageID    int
 	Info         []byte
 	KeyboardInfo []byte
@@ -26,21 +28,32 @@ type Button struct {
 }
 
 type WarehouseData struct {
-	TrackingID    int64
-	ChatID        int64
-	SendingDate   time.Time
-	FromDate      time.Time
-	ToDate        time.Time
-	Warehouse     int
-	WarehouseName string
-	CoeffLimit    int
-	SupplyType    string
-	IsActive      bool
+	TrackingID  int64
+	ChatID      int64
+	SendingDate time.Time
+	FromDate    time.Time
+	ToDate      time.Time
+	Warehouse   int
+	CoeffLimit  int
+	SupplyType  string
+	IsActive    bool
 }
 
 type ChangeStatusInfo struct {
 	TrackingID int64
 	Choice     int
+}
+
+type BookingData struct {
+	BookingID  int64
+	ChatID     int64
+	DraftID    uuid.UUID
+	FromDate   time.Time
+	ToDate     time.Time
+	Protection int
+	Warehouse  int
+	CoeffLimit int
+	SupplyType string
 }
 
 type TrackingDate struct {

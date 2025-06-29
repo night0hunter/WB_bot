@@ -24,3 +24,11 @@ var WarehouseNames = map[int]string{
 	206236: "Белые Столбы",
 	686:    "Новосибирск",
 }
+
+var Coefficients = map[int]string{
+	0:  "",
+	-2: "0",
+	1:  "1",
+	2:  "2",
+	3:  "3",
+}

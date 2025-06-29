@@ -11,6 +11,7 @@ const (
 	TrackingChoiceError
 	ActionChoiceError
 	SaveStatusChoiceError
+	BookingIdError
 )
 
 type MyError struct {

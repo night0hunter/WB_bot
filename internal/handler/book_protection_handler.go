@@ -11,13 +11,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type CoeffLimitHandler struct {
+type BookProtectionHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
 	commandName enum.CommandSequence
 }
 
-func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+func (h *BookProtectionHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	if update.CallbackQuery == nil {
 		return tmpData, nil
 	}
@@ -36,9 +36,9 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 
-	msg, err = keyboard.DrawCoeffKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawBookProtectKeyboard(msg, dto.KeyboardData{})
 	if err != nil {
-		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, " keyboard.DrawBookProtectKeyboard")
 	}
 
 	message, err := h.bot.Send(msg)
@@ -51,7 +51,7 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 	return tmpData, nil
 }
 
-func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+func (h *BookProtectionHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")
@@ -87,6 +87,6 @@ func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 	return tmpData, nil
 }
 
-func (h *CoeffLimitHandler) GetCommandName() enum.CommandSequence {
+func (h *BookProtectionHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

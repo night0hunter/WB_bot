@@ -7,39 +7,39 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func DrawCoeffKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (tgbotapi.MessageConfig, error) {
+func DrawBookProtectKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (tgbotapi.MessageConfig, error) {
 	tmpMarkup, err := GenerateKeyboard([]dto.Button{
 		{
 			Data: dto.ButtonData{
-				Type:  enum.ButtonTypeCoeffLimit,
+				Type:  enum.ButtonTypeBookProtection,
 				Value: -2, // shit for constmsg.Coefficients map
 			},
-			Text: "0x",
+			Text: "0",
 		},
 		{
 			Data: dto.ButtonData{
-				Type:  enum.ButtonTypeCoeffLimit,
+				Type:  enum.ButtonTypeBookProtection,
 				Value: 1,
 			},
-			Text: "1x",
+			Text: "1",
 		},
 		{
 			Data: dto.ButtonData{
-				Type:  enum.ButtonTypeCoeffLimit,
+				Type:  enum.ButtonTypeBookProtection,
 				Value: 2,
 			},
-			Text: "2x",
+			Text: "2",
 		},
 		{
 			Data: dto.ButtonData{
-				Type:  enum.ButtonTypeCoeffLimit,
+				Type:  enum.ButtonTypeBookProtection,
 				Value: 3,
 			},
-			Text: "3x",
+			Text: "3",
 		},
 		{
 			Data: dto.ButtonData{
-				Type:  enum.ButtonTypeCoeffLimit,
+				Type:  enum.ButtonTypeBookProtection,
 				Value: -1,
 			},
 			Text: "Назад",

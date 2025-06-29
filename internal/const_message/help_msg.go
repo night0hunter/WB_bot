@@ -10,6 +10,7 @@ var BotSlashCommands = map[enum.BotSlashCommandType]string{
 	enum.BotSlashCommandTypeAdd:    "/add",
 	enum.BotSlashCommandTypeChange: "/change",
 	enum.BotSlashCommandTypeCheck:  "/check",
+	enum.BotSlashCommandTypeBook:   "/book",
 }
 
 var BotSlashCommandsHelp = map[string]string{
@@ -17,6 +18,7 @@ var BotSlashCommandsHelp = map[string]string{
 	BotSlashCommands[enum.BotSlashCommandTypeAdd]:    "Команда для добавления нового отслеживания",
 	BotSlashCommands[enum.BotSlashCommandTypeChange]: "Команда для изменения статуса/удаления отслеживания",
 	BotSlashCommands[enum.BotSlashCommandTypeCheck]:  "Команда для вывода всех текущих отслеживаний",
+	BotSlashCommands[enum.BotSlashCommandTypeBook]:   "Команда для добавления автобронирования",
 }
 
 var MatchErrorType = map[myError.ErrorType]string{
@@ -27,4 +29,5 @@ var MatchErrorType = map[myError.ErrorType]string{
 	myError.TrackingChoiceError:   "Выберите отслеживание из списка",
 	myError.ActionChoiceError:     "Выберите действие из списка",
 	myError.SaveStatusChoiceError: "Выберите действие из списка",
+	myError.BookingIdError:        "ID введён неверно, попробуйте ещё раз",
 }

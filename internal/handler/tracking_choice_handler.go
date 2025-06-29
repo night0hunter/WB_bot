@@ -17,7 +17,7 @@ import (
 type TrackingChoiceHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
-	commandName enum.CommandSequences
+	commandName enum.CommandSequence
 }
 
 func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
@@ -49,7 +49,7 @@ func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Up
 
 	var msg tgbotapi.MessageConfig
 	if update.Message != nil {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, "Выберите отслеживание из списка ниже, чтобы изменить его статус/удалить")
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeTracking])
 	}
 
 	if update.CallbackQuery != nil {
@@ -120,6 +120,6 @@ func (h *TrackingChoiceHandler) Answer(ctx context.Context, update tgbotapi.Upda
 	return tmpData, nil
 }
 
-func (h *TrackingChoiceHandler) GetCommandName() enum.CommandSequences {
+func (h *TrackingChoiceHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

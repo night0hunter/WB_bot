@@ -38,26 +38,27 @@ type Service interface {
 type HandlerStruct interface {
 	Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error)
 	Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error)
-	GetCommandName() enum.CommandSequences
+	GetCommandName() enum.CommandSequence
 }
 
-type handler2 struct {
+type handler struct {
 	bot      *tgbotapi.BotAPI
 	service  Service
-	handlers map[enum.Sequences]map[enum.CommandSequences]struct {
+	handlers map[enum.Sequences]map[enum.CommandSequence]struct {
 		Prev    HandlerStruct
 		Current HandlerStruct
 		Next    HandlerStruct
 	}
 }
 
-var SequenceToFirstCommand = map[enum.Sequences]enum.CommandSequences{
-	enum.Add:    enum.BotCommandNameTypeAdd,
-	enum.Change: enum.BotCommandNameTypeChange,
+var SequenceToFirstCommand = map[enum.Sequences]enum.CommandSequence{
+	enum.Add:     enum.BotCommandNameTypeAdd,
+	enum.Change:  enum.BotCommandNameTypeChange,
+	enum.Booking: enum.BotCommandNameTypeBook,
 }
 
-func New(bot *tgbotapi.BotAPI, svc Service) *handler2 {
-	handlers := map[enum.Sequences]map[enum.CommandSequences]struct {
+func New(bot *tgbotapi.BotAPI, svc Service) *handler {
+	handlers := map[enum.Sequences]map[enum.CommandSequence]struct {
 		Prev    HandlerStruct
 		Current HandlerStruct
 		Next    HandlerStruct
@@ -116,12 +117,54 @@ func New(bot *tgbotapi.BotAPI, svc Service) *handler2 {
 				Next:    nil,
 			},
 		},
+		enum.Booking: {
+			enum.BotCommandNameTypeBook: {
+				Prev:    nil,
+				Current: nil,
+				Next:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
+			},
+			enum.BotCommandNameTypeSaveStatus: {
+				Prev:    nil,
+				Current: &SaveStatusHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeSaveStatus},
+				Next:    &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
+			},
+			enum.BotCommandNameTypeInputDate: {
+				Prev:    nil,
+				Current: &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
+				Next:    &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
+			},
+			enum.BotCommandNameTypeDraftID: {
+				Prev:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
+				Current: &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
+				Next:    &BookProtectionHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeBookProtection},
+			},
+			enum.BotCommandNameTypeBookProtection: {
+				Prev:    &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
+				Current: &BookProtectionHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeBookProtection},
+				Next:    &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
+			},
+			enum.BotCommandNameTypeInputWarehouse: {
+				Prev:    &BookProtectionHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeBookProtection},
+				Current: &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
+				Next:    &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
+			},
+			enum.BotCommandNameTypeInputCoeffLimit: {
+				Prev:    &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
+				Current: &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
+				Next:    &SupplyTypeHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputSupplyType},
+			},
+			enum.BotCommandNameTypeInputSupplyType: {
+				Prev:    &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
+				Current: &SupplyTypeHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputSupplyType},
+				Next:    nil,
+			},
+		},
 	}
 
-	return &handler2{bot: bot, service: svc, handlers: handlers}
+	return &handler{bot: bot, service: svc, handlers: handlers}
 }
 
-func (h *handler2) Run(ctx context.Context) error {
+func (h *handler) Run(ctx context.Context) error {
 	updateConfig := tgbotapi.NewUpdate(0)
 
 	updateConfig.Timeout = 30
@@ -144,17 +187,17 @@ func (h *handler2) Run(ctx context.Context) error {
 			err := h.ButtonHandler(ctx, update)
 			if err != nil {
 				// return errors.Wrap(err, "ButtonHandler")
-				fmt.Println(errors.Wrap(err, "h.messageHandler2"))
+				fmt.Println(errors.Wrap(err, "h.messageHandler"))
 			}
 
 			continue
 		}
 
 		if update.Message != nil {
-			err := h.messageHandler2(ctx, update)
+			err := h.messageHandler(ctx, update)
 			if err != nil {
-				// return errors.Wrap(err, "h.messageHandler2")
-				fmt.Println(errors.Wrap(err, "h.messageHandler2"))
+				// return errors.Wrap(err, "h.messageHandler")
+				fmt.Println(errors.Wrap(err, "h.messageHandler"))
 			}
 		}
 
@@ -163,7 +206,7 @@ func (h *handler2) Run(ctx context.Context) error {
 	return nil
 }
 
-func (h *handler2) messageHandler2(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) error {
 	switch update.Message.Text {
 	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeHelp]:
 		err := h.BotSlashCommandTypeHelpHandler(ctx, update)
@@ -185,6 +228,11 @@ func (h *handler2) messageHandler2(ctx context.Context, update tgbotapi.Update) 
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
 		}
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeBook]:
+		err := h.BotSlashCommandTypeBookHandler(ctx, update)
+		if err != nil {
+			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
+		}
 	default:
 		err := h.BotSlashCommandTypeDefaultHandler(ctx, update)
 		if err != nil {
@@ -195,7 +243,7 @@ func (h *handler2) messageHandler2(ctx context.Context, update tgbotapi.Update) 
 	return nil
 }
 
-func (h *handler2) BotSlashCommandTypeHelpHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) BotSlashCommandTypeHelpHandler(ctx context.Context, update tgbotapi.Update) error {
 	text := h.service.BotSlashCommandTypeHelpService(ctx, update.Message.Chat.ID)
 
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
@@ -206,7 +254,7 @@ func (h *handler2) BotSlashCommandTypeHelpHandler(ctx context.Context, update tg
 	return nil
 }
 
-func (h *handler2) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbotapi.Update) error {
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
@@ -275,7 +323,7 @@ func (h *handler2) BotSlashCommandTypeAddHandler(ctx context.Context, update tgb
 	return nil
 }
 
-func (h *handler2) BotSlashCommandTypeCheckHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tgbotapi.Update) error {
 	whs, err := h.service.BotSlashCommandTypeCheckService(ctx, update.Message.Chat.ID)
 	if err != nil {
 		return errors.Wrap(err, "service.BotSlashCommandTypeCheck")
@@ -305,7 +353,7 @@ func (h *handler2) BotSlashCommandTypeCheckHandler(ctx context.Context, update t
 	return nil
 }
 
-func (h *handler2) BotSlashCommandTypeChangeHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update tgbotapi.Update) error {
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
@@ -380,7 +428,76 @@ func (h *handler2) BotSlashCommandTypeChangeHandler(ctx context.Context, update 
 	return nil
 }
 
-func (h *handler2) BotSlashCommandTypeDefaultHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) BotSlashCommandTypeBookHandler(ctx context.Context, update tgbotapi.Update) error {
+	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
+	_, err := h.bot.Send(deleteMsg)
+	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
+		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+	}
+
+	state, err := h.service.SelectState(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.SelectState")
+	}
+
+	if state.Info != nil {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, state.MessageID)
+		_, err := h.bot.Send(deleteMsg)
+		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
+			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		}
+	}
+
+	if state.Info != nil && state.SequenceName == enum.Booking {
+		if state.CommandName != enum.BotCommandNameTypeSaveStatus {
+			// state.CommandName = SequenceToFirstCommand[state.SequenceName]
+			if h.handlers[state.SequenceName][state.CommandName].Prev != nil {
+				state.CommandName = h.handlers[state.SequenceName][state.CommandName].Prev.GetCommandName()
+			}
+		}
+
+		prevCommand, err := h.handlers[state.SequenceName][enum.BotCommandNameTypeSaveStatus].Current.Question(ctx, update, state)
+		if err != nil {
+			return errors.Wrap(err, "handlers[state.SequenceName][enum.BotCommandNameTypeSaveStatus].Current.Question")
+		}
+
+		err = h.service.UpdateState(ctx, update.Message.Chat.ID, dto.PrevCommandInfo{
+			SequenceName: state.SequenceName,
+			CommandName:  enum.BotCommandNameTypeSaveStatus,
+			MessageID:    prevCommand.MessageID,
+			Info:         prevCommand.Info,
+		})
+		if err != nil {
+			return errors.Wrap(err, "service.InsertState")
+		}
+
+		return nil
+	}
+
+	err = h.service.DeleteState(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.DeleteState")
+	}
+
+	prevCommand, err := h.handlers[enum.Booking][SequenceToFirstCommand[enum.Booking]].Next.Question(ctx, update, dto.PrevCommandInfo{})
+	if err != nil {
+		return errors.Wrap(err, "handlers[enum.Add][SequenceToFirstCommand[enum.Add]].Next.Question")
+	}
+
+	err = h.service.InsertState(ctx, update.Message.Chat.ID, dto.PrevCommandInfo{
+		SequenceName: enum.Booking,
+		CommandName:  enum.BotCommandNameTypeInputDate,
+		MessageID:    prevCommand.MessageID,
+		Info:         prevCommand.Info,
+	})
+	if err != nil {
+		return errors.Wrap(err, "service.InsertState")
+	}
+
+	return nil
+}
+
+func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update tgbotapi.Update) error {
 	prevCommand, err := h.service.SelectState(ctx, update.Message.Chat.ID)
 	if err != nil {
 		errors.Wrap(err, "service.SelectState")
@@ -391,12 +508,6 @@ func (h *handler2) BotSlashCommandTypeDefaultHandler(ctx context.Context, update
 
 		// return errors.New("Unknown command")
 		return err
-	}
-
-	var data dto.WarehouseData
-	err = json.Unmarshal(prevCommand.Info, &data)
-	if err != nil {
-		return errors.Wrap(err, "json.Unmarshal")
 	}
 
 	prevCommand, err = h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Current.Answer(ctx, update, prevCommand)
@@ -488,7 +599,7 @@ func (h *handler2) BotSlashCommandTypeDefaultHandler(ctx context.Context, update
 	return nil
 }
 
-func (h *handler2) ButtonHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update) error {
 	prevCommand, err := h.service.SelectState(ctx, update.CallbackQuery.Message.Chat.ID)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Такой команды не существует")
@@ -520,6 +631,13 @@ func (h *handler2) ButtonHandler(ctx context.Context, update tgbotapi.Update) er
 			}
 
 			return nil
+		}
+
+		copy := update
+		copy.CallbackQuery.Data = "{}"
+		prevCommand, err = h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Prev.Answer(ctx, copy, prevCommand)
+		if err != nil {
+			return errors.Wrap(err, "handlers[prevCommand.SequenceName][prevCommand.CommandName].Prev.Answer")
 		}
 
 		prevCommand, err = h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Prev.Question(ctx, update, prevCommand)
@@ -560,7 +678,7 @@ func (h *handler2) ButtonHandler(ctx context.Context, update tgbotapi.Update) er
 				return errors.Wrap(err, "service.AddSequenceEndService")
 			}
 
-			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Склад успешно добавлен")
+			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Отслеживание успешно добавлено")
 			if _, err = h.bot.Send(msg); err != nil {
 				return errors.Wrap(err, "bot.Send")
 			}

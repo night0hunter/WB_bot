@@ -68,11 +68,11 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 		warehouseStrs = append(
 			warehouseStrs,
 			fmt.Sprintf(
-				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
+				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%s и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
 				constmsg.WarehouseNames[int(wh.Warehouse)],
 				wh.FromDate.Format(dto.TimeFormat),
 				wh.ToDate.Format(dto.TimeFormat),
-				wh.CoeffLimit,
+				constmsg.Coefficients[wh.CoeffLimit],
 				wh.SupplyType,
 				utils.BoolToActiveRU(wh.IsActive),
 			),
