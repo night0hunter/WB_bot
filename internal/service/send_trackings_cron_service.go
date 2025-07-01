@@ -37,7 +37,7 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 				continue
 			}
 
-			if tr.CoeffLimit < sortedResponse[tr.Warehouse][j].Coefficient {
+			if *tr.CoeffLimit < sortedResponse[tr.Warehouse][j].Coefficient {
 				continue
 			}
 

@@ -1,4 +1,4 @@
-package handler
+package changeHandler
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -102,7 +103,7 @@ func (h *TrackingChoiceHandler) Answer(ctx context.Context, update tgbotapi.Upda
 	var data dto.ChangeStatusInfo
 
 	if tmpData.Info != nil {
-		data, err = Unmarshal[dto.ChangeStatusInfo](tmpData.Info)
+		data, err = utils.Unmarshal[dto.ChangeStatusInfo](tmpData.Info)
 		if err != nil {
 			return tmpData, errors.Wrap(err, "Unmarshal")
 		}
@@ -110,7 +111,7 @@ func (h *TrackingChoiceHandler) Answer(ctx context.Context, update tgbotapi.Upda
 
 	data.TrackingID = int64(buttonData.Value)
 
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Marshal")
 	}

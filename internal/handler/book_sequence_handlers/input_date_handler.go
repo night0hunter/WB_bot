@@ -1,10 +1,12 @@
-package handler
+package bookHandler
 
 import (
 	"context"
+	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	"wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -22,19 +24,19 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 	var err error
 
 	if tmpData.Info != nil {
-		data, err = Unmarshal[dto.WarehouseData](tmpData.Info)
+		data, err = utils.Unmarshal[dto.WarehouseData](tmpData.Info)
 		if err != nil {
-			return dto.PrevCommandInfo{}, errors.Wrap(err, "Unmarshal")
+			return dto.PrevCommandInfo{}, errors.Wrap(err, "utils.Unmarshal")
 		}
 	}
 
 	if update.Message != nil {
-		msg = tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, constmsg.BotCommands[enum.BotCommandNameTypeInputDate])
 		data.ChatID = update.Message.Chat.ID
 	}
 
 	if update.CallbackQuery != nil {
-		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputDate])
+		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, constmsg.BotCommands[enum.BotCommandNameTypeInputDate])
 		data.ChatID = update.CallbackQuery.Message.Chat.ID
 	}
 
@@ -49,9 +51,9 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 	}
 
 	tmpData.MessageID = message.MessageID
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return dto.PrevCommandInfo{}, errors.Wrap(err, "Marshal")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json
@@ -60,9 +62,9 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 }
 
 func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+	data, err := utils.Unmarshal[dto.BookingData](tmpData.Info)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "utils.Unmarshal")
 	}
 
 	if update.Message == nil {
@@ -77,9 +79,9 @@ func (h *InputDateHandler) Answer(ctx context.Context, update tgbotapi.Update, t
 	data.FromDate = timeRange.DateFrom
 	data.ToDate = timeRange.DateTo
 
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Marshal")
+		return tmpData, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json

@@ -14,8 +14,11 @@ import (
 
 type Repository interface {
 	SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error)
-	InsertQuery(ctx context.Context, params dto.WarehouseData) error
 	SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error)
+
+	InsertTracking(ctx context.Context, params dto.WarehouseData) error
+	InsertBooking(ctx context.Context, params dto.BookingData) error
+
 	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
 	DeleteTracking(ctx context.Context, trackingID int64) error
 	JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error)
@@ -72,7 +75,7 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 				constmsg.WarehouseNames[int(wh.Warehouse)],
 				wh.FromDate.Format(dto.TimeFormat),
 				wh.ToDate.Format(dto.TimeFormat),
-				constmsg.Coefficients[wh.CoeffLimit],
+				*wh.CoeffLimit,
 				wh.SupplyType,
 				utils.BoolToActiveRU(wh.IsActive),
 			),
@@ -131,9 +134,24 @@ func (s *Service) AddSequenceEndService(ctx context.Context, chatID int64, data 
 		return errors.Wrap(err, "json.Unmarshal")
 	}
 
-	err = s.Repository.InsertQuery(ctx, unmarshData)
+	err = s.Repository.InsertTracking(ctx, unmarshData)
 	if err != nil {
 		return errors.Wrap(err, "Repository.InsertQuery")
+	}
+
+	return nil
+}
+
+func (s *Service) BookSequenceEndService(ctx context.Context, chatID int64, data []byte) error {
+	var unmarshData dto.BookingData
+	err := json.Unmarshal(data, &unmarshData)
+	if err != nil {
+		return errors.Wrap(err, "json.Unmarshal")
+	}
+
+	err = s.Repository.InsertBooking(ctx, unmarshData)
+	if err != nil {
+		return errors.Wrap(err, "Repository.InsertBooking")
 	}
 
 	return nil

@@ -34,7 +34,7 @@ type WarehouseData struct {
 	FromDate    time.Time
 	ToDate      time.Time
 	Warehouse   int
-	CoeffLimit  int
+	CoeffLimit  *int
 	SupplyType  string
 	IsActive    bool
 }
@@ -50,9 +50,9 @@ type BookingData struct {
 	DraftID    uuid.UUID
 	FromDate   time.Time
 	ToDate     time.Time
-	Protection int
+	Protection *int
 	Warehouse  int
-	CoeffLimit int
+	CoeffLimit *int
 	SupplyType string
 }
 

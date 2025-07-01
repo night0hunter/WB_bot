@@ -96,7 +96,7 @@ func (pg *Postgres) SelectQuery(ctx context.Context, ChatID int64) ([]dto.Wareho
 	return warehouses, nil
 }
 
-func (pg *Postgres) InsertQuery(ctx context.Context, params dto.WarehouseData) error {
+func (pg *Postgres) InsertTracking(ctx context.Context, params dto.WarehouseData) error {
 	query := `INSERT INTO supplies (
 					chat_id,
 					from_date,
@@ -233,6 +233,37 @@ func (pg *Postgres) UpdateSendingTime(ctx context.Context, date time.Time, id in
 	_, err := pg.db.Exec(ctx, query, args)
 	if err != nil {
 		return errors.Wrap(err, "UpdateSendingDate")
+	}
+
+	return nil
+}
+
+func (pg *Postgres) InsertBooking(ctx context.Context, params dto.BookingData) error {
+	query := `INSERT INTO bookings (
+					chat_id,
+					from_date,
+					to_date,
+					draft_id,
+					protection,
+					warehouse,
+					coeff_limit,
+					supply_type
+				)
+  			  VALUES (@ChatID, @FromDate, @ToDate, @DraftID, @Protection, @Warehouse, @CoeffLimit, @SupplyType)`
+	args := pgx.NamedArgs{
+		"ChatID":     params.ChatID,
+		"FromDate":   params.FromDate,
+		"ToDate":     params.ToDate,
+		"DraftID":    params.DraftID,
+		"Protection": params.Protection,
+		"Warehouse":  params.Warehouse,
+		"CoeffLimit": params.CoeffLimit,
+		"SupplyType": params.SupplyType,
+	}
+
+	_, err := pg.db.Exec(ctx, query, args)
+	if err != nil {
+		return errors.Wrap(err, "unable to insert row")
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-package handler
+package bookHandler
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -22,14 +23,7 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 		return tmpData, nil
 	}
 
-	var buttonData dto.ButtonData
-
-	err := json.Unmarshal([]byte(update.CallbackQuery.Data), &buttonData)
-	if err != nil {
-		return dto.PrevCommandInfo{}, errors.Wrap(err, "json.Unmarshal")
-	}
-
-	text, err := SequenceController(tmpData, h.GetCommandName())
+	text, err := CraftMessage(tmpData, h.GetCommandName())
 	if err != nil {
 		return tmpData, errors.Wrap(err, "SequenceController")
 	}
@@ -52,9 +46,9 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 }
 
 func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+	data, err := utils.Unmarshal[dto.BookingData](tmpData.Info)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "utils.Unmarshal")
 	}
 
 	if update.Message != nil {
@@ -63,7 +57,7 @@ func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 			return tmpData, errors.Wrap(err, "service.BotAnswerInputCoeffLimitService")
 		}
 
-		data.CoeffLimit = coeff
+		data.CoeffLimit = &coeff
 	}
 
 	if update.CallbackQuery != nil {
@@ -74,12 +68,12 @@ func (h *CoeffLimitHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 			return tmpData, errors.Wrap(err, "json.Unmarshal")
 		}
 
-		data.CoeffLimit = buttonData.Value
+		data.CoeffLimit = &buttonData.Value
 	}
 
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Marshal")
+		return tmpData, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json

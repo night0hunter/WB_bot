@@ -1,4 +1,4 @@
-package handler
+package changeHandler
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/model"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -77,7 +78,7 @@ func (h *SaveStatusHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 
 		return data, nil
 	case 2: // Start sequence over
-		tmpData.CommandName = SequenceToFirstCommand[tmpData.SequenceName]
+		tmpData.CommandName = model.SequenceToFirstCommand[tmpData.SequenceName]
 	default:
 	}
 

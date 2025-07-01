@@ -1,4 +1,4 @@
-package handler
+package addHandler
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ type WarehouseHandler struct {
 func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 
-	text, err := SequenceController(tmpData, h.GetCommandName())
+	text, err := CraftMessage(tmpData, h.GetCommandName())
 	if err != nil {
 		return tmpData, errors.Wrap(err, "SequenceController")
 	}
@@ -50,9 +51,9 @@ func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update,
 }
 
 func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+	data, err := utils.Unmarshal[dto.WarehouseData](tmpData.Info)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "utils.Unmarshal")
 	}
 
 	if update.CallbackQuery == nil && update.Message != nil {
@@ -61,8 +62,6 @@ func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, t
 			ErrType: myError.WarehouseInputError,
 			Message: "warehouse - user input error",
 		}
-
-		// return tmpData, nil
 	}
 
 	var buttonData dto.ButtonData
@@ -74,9 +73,9 @@ func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, t
 
 	data.Warehouse = buttonData.Value
 
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Marshal")
+		return tmpData, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json

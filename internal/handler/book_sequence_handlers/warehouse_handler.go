@@ -1,29 +1,28 @@
-package handler
+package bookHandler
 
 import (
 	"context"
 	"encoding/json"
-	"strconv"
-	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
 )
 
-type SupplyTypeHandler struct {
+type WarehouseHandler struct {
 	bot         *tgbotapi.BotAPI
 	service     Service
 	commandName enum.CommandSequence
 }
 
-func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var msg tgbotapi.MessageConfig
 
-	text, err := SequenceController(tmpData, h.GetCommandName())
+	text, err := CraftMessage(tmpData, h.GetCommandName())
 	if err != nil {
 		return tmpData, errors.Wrap(err, "SequenceController")
 	}
@@ -36,10 +35,9 @@ func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
-	// msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
-	msg, err = keyboard.DrawSupplyKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawWarehouseKeyboard(msg, dto.KeyboardData{})
 	if err != nil {
-		return tmpData, errors.Wrap(err, "keyboard.DrawSupplyKeyboard")
+		return tmpData, errors.Wrap(err, "keyboard.DrawWarehouseKeyboard")
 	}
 
 	message, err := h.bot.Send(msg)
@@ -52,32 +50,32 @@ func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update
 	return tmpData, nil
 }
 
-func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	data, err := Unmarshal[dto.WarehouseData](tmpData.Info)
+func (h *WarehouseHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+	data, err := utils.Unmarshal[dto.BookingData](tmpData.Info)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "utils.Unmarshal")
 	}
 
-	if update.Message != nil {
-		data.SupplyType = ""
-
+	if update.CallbackQuery == nil && update.Message != nil {
+		data.Warehouse = 0
 		return tmpData, &myError.MyError{
-			ErrType: myError.SupplyTypeError,
-			Message: "supplyType - user input error",
+			ErrType: myError.WarehouseInputError,
+			Message: "warehouse - user input error",
 		}
 	}
 
 	var buttonData dto.ButtonData
+
 	err = json.Unmarshal([]byte(update.CallbackQuery.Data), &buttonData)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "json.Unmarshal")
 	}
 
-	data.SupplyType = constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)]
+	data.Warehouse = buttonData.Value
 
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Marshal")
+		return tmpData, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json
@@ -85,6 +83,6 @@ func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 	return tmpData, nil
 }
 
-func (h *SupplyTypeHandler) GetCommandName() enum.CommandSequence {
+func (h *WarehouseHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

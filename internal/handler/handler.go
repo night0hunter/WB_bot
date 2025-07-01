@@ -9,7 +9,11 @@ import (
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
+	addHandler "wb_bot/internal/handler/add_sequence_handlers"
+	bookHandler "wb_bot/internal/handler/book_sequence_handlers"
+	changeHandler "wb_bot/internal/handler/change_sequence_handlers"
 	"wb_bot/internal/model"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -23,9 +27,11 @@ type Service interface {
 	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error)
 	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) (int, error)
 	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
-	AddSequenceEndService(ctx context.Context, chatID int64, data []byte) error
 	GetTrackings(ctx context.Context) ([]dto.MergedResp, error)
 	KeepSendingTime(ctx context.Context, tracking dto.MergedResp) error
+
+	AddSequenceEndService(ctx context.Context, chatID int64, data []byte) error
+	BookSequenceEndService(ctx context.Context, chatID int64, data []byte) error
 
 	SelectState(ctx context.Context, chatID int64) (dto.PrevCommandInfo, error)
 	InsertState(ctx context.Context, chatID int64, prevCommand dto.PrevCommandInfo) error
@@ -35,131 +41,26 @@ type Service interface {
 
 // var prevCommands = map[int64]dto.PrevCommandInfo{}
 
-type HandlerStruct interface {
-	Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error)
-	Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error)
-	GetCommandName() enum.CommandSequence
-}
-
 type handler struct {
 	bot      *tgbotapi.BotAPI
 	service  Service
 	handlers map[enum.Sequences]map[enum.CommandSequence]struct {
-		Prev    HandlerStruct
-		Current HandlerStruct
-		Next    HandlerStruct
+		Prev    model.HandlerStruct
+		Current model.HandlerStruct
+		Next    model.HandlerStruct
 	}
-}
-
-var SequenceToFirstCommand = map[enum.Sequences]enum.CommandSequence{
-	enum.Add:     enum.BotCommandNameTypeAdd,
-	enum.Change:  enum.BotCommandNameTypeChange,
-	enum.Booking: enum.BotCommandNameTypeBook,
 }
 
 func New(bot *tgbotapi.BotAPI, svc Service) *handler {
 	handlers := map[enum.Sequences]map[enum.CommandSequence]struct {
-		Prev    HandlerStruct
-		Current HandlerStruct
-		Next    HandlerStruct
-	}{
-		enum.Add: {
-			enum.BotCommandNameTypeAdd: {
-				Prev:    nil,
-				Current: nil,
-				Next:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-			},
-			enum.BotCommandNameTypeSaveStatus: {
-				Prev:    nil,
-				Current: &SaveStatusHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeSaveStatus},
-				Next:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-			},
-			enum.BotCommandNameTypeInputDate: {
-				Prev:    nil,
-				Current: &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-				Next:    &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
-			},
-			enum.BotCommandNameTypeInputWarehouse: {
-				Prev:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-				Current: &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
-				Next:    &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
-			},
-			enum.BotCommandNameTypeInputCoeffLimit: {
-				Prev:    &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
-				Current: &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
-				Next:    &SupplyTypeHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputSupplyType},
-			},
-			enum.BotCommandNameTypeInputSupplyType: {
-				Prev:    &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
-				Current: &SupplyTypeHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputSupplyType},
-				Next:    nil,
-			},
-		},
-		enum.Change: {
-			enum.BotCommandNameTypeChange: {
-				Prev:    nil,
-				Current: nil,
-				Next:    &TrackingChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeTracking},
-			},
-			enum.BotCommandNameTypeSaveStatus: {
-				Prev:    nil,
-				Current: &SaveStatusHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeSaveStatus},
-				Next:    &TrackingChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeTracking},
-			},
-			enum.BotCommandNameTypeTracking: {
-				Prev:    nil,
-				Current: &TrackingChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeTracking},
-				Next:    &ActionChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeAction},
-			},
-			enum.BotCommandNameTypeAction: {
-				Prev:    &TrackingChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeTracking},
-				Current: &ActionChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeAction},
-				Next:    nil,
-			},
-		},
-		enum.Booking: {
-			enum.BotCommandNameTypeBook: {
-				Prev:    nil,
-				Current: nil,
-				Next:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-			},
-			enum.BotCommandNameTypeSaveStatus: {
-				Prev:    nil,
-				Current: &SaveStatusHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeSaveStatus},
-				Next:    &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
-			},
-			enum.BotCommandNameTypeInputDate: {
-				Prev:    nil,
-				Current: &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-				Next:    &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
-			},
-			enum.BotCommandNameTypeDraftID: {
-				Prev:    &InputDateHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputDate},
-				Current: &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
-				Next:    &BookProtectionHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeBookProtection},
-			},
-			enum.BotCommandNameTypeBookProtection: {
-				Prev:    &DraftIdHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeDraftID},
-				Current: &BookProtectionHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeBookProtection},
-				Next:    &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
-			},
-			enum.BotCommandNameTypeInputWarehouse: {
-				Prev:    &BookProtectionHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeBookProtection},
-				Current: &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
-				Next:    &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
-			},
-			enum.BotCommandNameTypeInputCoeffLimit: {
-				Prev:    &WarehouseHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputWarehouse},
-				Current: &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
-				Next:    &SupplyTypeHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputSupplyType},
-			},
-			enum.BotCommandNameTypeInputSupplyType: {
-				Prev:    &CoeffLimitHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputCoeffLimit},
-				Current: &SupplyTypeHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeInputSupplyType},
-				Next:    nil,
-			},
-		},
-	}
+		Prev    model.HandlerStruct
+		Current model.HandlerStruct
+		Next    model.HandlerStruct
+	}{}
+
+	handlers[enum.Add] = addHandler.New(bot, svc)
+	handlers[enum.Change] = changeHandler.New(bot, svc)
+	handlers[enum.Booking] = bookHandler.New(bot, svc)
 
 	return &handler{bot: bot, service: svc, handlers: handlers}
 }
@@ -276,9 +177,10 @@ func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbo
 
 	if state.Info != nil && state.SequenceName == enum.Add {
 		if state.CommandName != enum.BotCommandNameTypeSaveStatus {
-			// state.CommandName = SequenceToFirstCommand[state.SequenceName]
 			if h.handlers[state.SequenceName][state.CommandName].Prev != nil {
 				state.CommandName = h.handlers[state.SequenceName][state.CommandName].Prev.GetCommandName()
+			} else {
+				state.CommandName = model.SequenceToFirstCommand[state.SequenceName]
 			}
 		}
 
@@ -305,7 +207,7 @@ func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbo
 		return errors.Wrap(err, "service.DeleteState")
 	}
 
-	prevCommand, err := h.handlers[enum.Add][SequenceToFirstCommand[enum.Add]].Next.Question(ctx, update, dto.PrevCommandInfo{})
+	prevCommand, err := h.handlers[enum.Add][model.SequenceToFirstCommand[enum.Add]].Next.Question(ctx, update, dto.PrevCommandInfo{})
 	if err != nil {
 		return errors.Wrap(err, "handlers[enum.Add][SequenceToFirstCommand[enum.Add]].Next.Question")
 	}
@@ -404,7 +306,7 @@ func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update t
 		return errors.Wrap(err, "service.DeleteState")
 	}
 
-	prevCommand, err := h.handlers[enum.Change][SequenceToFirstCommand[enum.Change]].Next.Question(ctx, update, dto.PrevCommandInfo{})
+	prevCommand, err := h.handlers[enum.Change][model.SequenceToFirstCommand[enum.Change]].Next.Question(ctx, update, dto.PrevCommandInfo{})
 	if err != nil {
 		return errors.Wrap(err, "handlers[enum.BotCommandNameTypeInputDate].Value.Question")
 	}
@@ -479,7 +381,7 @@ func (h *handler) BotSlashCommandTypeBookHandler(ctx context.Context, update tgb
 		return errors.Wrap(err, "service.DeleteState")
 	}
 
-	prevCommand, err := h.handlers[enum.Booking][SequenceToFirstCommand[enum.Booking]].Next.Question(ctx, update, dto.PrevCommandInfo{})
+	prevCommand, err := h.handlers[enum.Booking][model.SequenceToFirstCommand[enum.Booking]].Next.Question(ctx, update, dto.PrevCommandInfo{})
 	if err != nil {
 		return errors.Wrap(err, "handlers[enum.Add][SequenceToFirstCommand[enum.Add]].Next.Question")
 	}
@@ -500,14 +402,16 @@ func (h *handler) BotSlashCommandTypeBookHandler(ctx context.Context, update tgb
 func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update tgbotapi.Update) error {
 	prevCommand, err := h.service.SelectState(ctx, update.Message.Chat.ID)
 	if err != nil {
-		errors.Wrap(err, "service.SelectState")
+		return errors.Wrap(err, "service.SelectState")
+	}
+
+	if prevCommand.Info == nil {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Такой команды не существует")
 		if _, msgErr := h.bot.Send(msg); err != nil {
 			return errors.Wrap(msgErr, "bot.Send")
 		}
 
-		// return errors.New("Unknown command")
-		return err
+		return nil
 	}
 
 	prevCommand, err = h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Current.Answer(ctx, update, prevCommand)
@@ -530,7 +434,7 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 
 			var whs []dto.WarehouseData
 			if prevCommand.KeyboardInfo != nil {
-				whs, err = Unmarshal[[]dto.WarehouseData](prevCommand.KeyboardInfo)
+				whs, err = utils.Unmarshal[[]dto.WarehouseData](prevCommand.KeyboardInfo)
 				if err != nil {
 					return errors.Wrap(err, "Unmarshal")
 				}
@@ -642,7 +546,7 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update) err
 
 		prevCommand, err = h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Prev.Question(ctx, update, prevCommand)
 		if err != nil {
-			return errors.Wrap(err, "handlers[prevCommand.CommandName].Prev.Question")
+			return errors.Wrap(err, "handlers[prevCommand.SequenceName][prevCommand.CommandName].Prev.Question")
 		}
 
 		err = h.service.UpdateState(ctx, update.CallbackQuery.Message.Chat.ID, dto.PrevCommandInfo{
@@ -679,6 +583,16 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update) err
 			}
 
 			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Отслеживание успешно добавлено")
+			if _, err = h.bot.Send(msg); err != nil {
+				return errors.Wrap(err, "bot.Send")
+			}
+		case enum.Booking:
+			err = h.service.BookSequenceEndService(ctx, update.CallbackQuery.Message.Chat.ID, prevCommand.Info)
+			if err != nil {
+				return errors.Wrap(err, "service.BookSequenceEndService")
+			}
+
+			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Автобронирование успешно добавлено")
 			if _, err = h.bot.Send(msg); err != nil {
 				return errors.Wrap(err, "bot.Send")
 			}

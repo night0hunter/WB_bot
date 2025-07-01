@@ -1,4 +1,4 @@
-package handler
+package bookHandler
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
@@ -24,13 +25,13 @@ func (h *DraftIdHandler) Question(ctx context.Context, update tgbotapi.Update, t
 	var err error
 
 	if tmpData.Info != nil {
-		data, err = Unmarshal[dto.BookingData](tmpData.Info)
+		data, err = utils.Unmarshal[dto.BookingData](tmpData.Info)
 		if err != nil {
-			return dto.PrevCommandInfo{}, errors.Wrap(err, "Unmarshal")
+			return dto.PrevCommandInfo{}, errors.Wrap(err, "utils.Unmarshal")
 		}
 	}
 
-	text, err := SequenceController(tmpData, h.GetCommandName())
+	text, err := CraftMessage(tmpData, h.GetCommandName())
 	if err != nil {
 		return tmpData, errors.Wrap(err, "SequenceController")
 	}
@@ -54,9 +55,9 @@ func (h *DraftIdHandler) Question(ctx context.Context, update tgbotapi.Update, t
 	}
 
 	tmpData.MessageID = message.MessageID
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return dto.PrevCommandInfo{}, errors.Wrap(err, "Marshal")
+		return dto.PrevCommandInfo{}, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json
@@ -65,12 +66,20 @@ func (h *DraftIdHandler) Question(ctx context.Context, update tgbotapi.Update, t
 }
 
 func (h *DraftIdHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
-	data, err := Unmarshal[dto.BookingData](tmpData.Info)
+	data, err := utils.Unmarshal[dto.BookingData](tmpData.Info)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Unmarshal")
+		return tmpData, errors.Wrap(err, "utils.Unmarshal")
 	}
 
 	if update.Message == nil {
+		data.DraftID = uuid.UUID{}
+		json, err := utils.Marshal(data)
+		if err != nil {
+			return tmpData, errors.Wrap(err, "utils.Marshal")
+		}
+
+		tmpData.Info = json
+
 		return tmpData, nil
 	}
 
@@ -84,9 +93,9 @@ func (h *DraftIdHandler) Answer(ctx context.Context, update tgbotapi.Update, tmp
 
 	data.DraftID = id
 
-	json, err := Marshal(data)
+	json, err := utils.Marshal(data)
 	if err != nil {
-		return tmpData, errors.Wrap(err, "Marshal")
+		return tmpData, errors.Wrap(err, "utils.Marshal")
 	}
 
 	tmpData.Info = json

@@ -1,4 +1,4 @@
-package handler
+package changeHandler
 
 import (
 	"context"
@@ -7,16 +7,11 @@ import (
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
 	keyboard "wb_bot/internal/handler/keyboard"
+	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
 )
-
-type ActionChoiceHandler struct {
-	bot         *tgbotapi.BotAPI
-	service     Service
-	commandName enum.CommandSequence
-}
 
 func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var err error
@@ -44,7 +39,7 @@ func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update
 		}
 	}
 
-	data, err := Unmarshal[dto.ChangeStatusInfo](tmpData.Info)
+	data, err := utils.Unmarshal[dto.ChangeStatusInfo](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")
 	}
