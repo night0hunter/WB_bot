@@ -7,7 +7,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func DrawCancelKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (tgbotapi.MessageConfig, error) {
+func DrawCancelKeyboard(msg tgbotapi.MessageConfig, data []byte) (tgbotapi.MessageConfig, error) {
 	tmpMarkup, err := GenerateKeyboard([]dto.Button{
 		{
 			Data: dto.ButtonData{

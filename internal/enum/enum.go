@@ -10,14 +10,16 @@ const (
 	ButtonTypeActionChoice
 	ButtonTypeSaveStatus
 	ButtonTypeBookProtection
+	ButtonTypeUserBookingsChoice
 )
 
 type Sequences uint8
 
 const (
 	Add Sequences = iota + 1
-	Change
+	ChangeTracking
 	Booking
+	ChangeBooking
 )
 
 type CommandSequence uint8
@@ -31,8 +33,11 @@ const (
 	BotCommandNameTypeInputCoeffLimit
 	BotCommandNameTypeInputSupplyType
 
-	// change sequence
-	BotCommandNameTypeChange
+	// change booking sequence
+	BotCommandNameTypeChangeBooking
+
+	// change tracking sequence
+	BotCommandNameTypeChangeTracking
 	BotCommandNameTypeTracking
 	BotCommandNameTypeAction
 
@@ -50,14 +55,18 @@ type BotSlashCommandType uint8
 const (
 	BotSlashCommandTypeHelp BotSlashCommandType = iota + 1
 	BotSlashCommandTypeAdd
-	BotSlashCommandTypeChange
-	BotSlashCommandTypeCheck
+	BotSlashCommandTypeChangeTracking
+	BotSlashCommandTypeCheckTrackings
 	BotSlashCommandTypeStop
 	BotSlashCommandTypeBook
+	BotSlashCommandTypeChangeBooking
+	BotSlashCommandTypeCheckBookings
 )
 
+type SupplyType uint8
+
 const (
-	Box        = "2"
-	Monopallet = "5"
-	SuperSafe  = "6"
+	Box        SupplyType = 2
+	Monopallet SupplyType = 5
+	SuperSafe  SupplyType = 6
 )

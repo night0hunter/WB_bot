@@ -40,7 +40,7 @@ func (h *InputDateHandler) Question(ctx context.Context, update tgbotapi.Update,
 		data.ChatID = update.CallbackQuery.Message.Chat.ID
 	}
 
-	msg, err = keyboard.DrawCancelKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawCancelKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCancelKeyboard")
 	}

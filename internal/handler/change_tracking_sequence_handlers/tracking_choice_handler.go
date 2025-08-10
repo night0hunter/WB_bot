@@ -1,4 +1,4 @@
-package changeHandler
+package changeTrackingHandler
 
 import (
 	"context"
@@ -57,10 +57,12 @@ func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Up
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Выберите отслеживание из списка ниже, чтобы изменить его статус/удалить")
 	}
 
-	data := dto.KeyboardData{
-		Warehouses: warehouses,
+	j, err := json.Marshal(warehouses)
+	if err != nil {
+		return tmpData, errors.Wrap(err, "json.Marshal")
 	}
-	msg, err = keyboard.DrawTrackingsKeyboard(msg, data)
+
+	msg, err = keyboard.DrawTrackingsKeyboard(msg, j)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "keyboard.DrawTrackingsKeyboard")
 	}
@@ -68,11 +70,6 @@ func (h *TrackingChoiceHandler) Question(ctx context.Context, update tgbotapi.Up
 	message, err := h.bot.Send(msg)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "bot.Send")
-	}
-
-	j, err := json.Marshal(warehouses)
-	if err != nil {
-		return tmpData, errors.Wrap(err, "json.Marshal")
 	}
 
 	tmpData.MessageID = message.MessageID
@@ -100,10 +97,10 @@ func (h *TrackingChoiceHandler) Answer(ctx context.Context, update tgbotapi.Upda
 		return tmpData, errors.Wrap(err, "json.Unmarshal")
 	}
 
-	var data dto.ChangeStatusInfo
+	var data dto.ChangeTrackingStatusInfo
 
 	if tmpData.Info != nil {
-		data, err = utils.Unmarshal[dto.ChangeStatusInfo](tmpData.Info)
+		data, err = utils.Unmarshal[dto.ChangeTrackingStatusInfo](tmpData.Info)
 		if err != nil {
 			return tmpData, errors.Wrap(err, "Unmarshal")
 		}

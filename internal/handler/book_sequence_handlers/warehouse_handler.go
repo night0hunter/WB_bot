@@ -35,7 +35,7 @@ func (h *WarehouseHandler) Question(ctx context.Context, update tgbotapi.Update,
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
-	msg, err = keyboard.DrawWarehouseKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawWarehouseKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "keyboard.DrawWarehouseKeyboard")
 	}

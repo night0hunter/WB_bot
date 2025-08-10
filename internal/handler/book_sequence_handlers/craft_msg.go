@@ -36,7 +36,7 @@ func CraftMessage(prevCommand dto.PrevCommandInfo, comName enum.CommandSequence)
 			protection,
 			constmsg.WarehouseNames[data.Warehouse],
 			coefLimit,
-			data.SupplyType,
+			constmsg.SupplyTypes[data.SupplyType],
 			constmsg.BotCommands[comName],
 		), nil
 	}
@@ -49,7 +49,7 @@ func CraftMessage(prevCommand dto.PrevCommandInfo, comName enum.CommandSequence)
 		protection,
 		constmsg.WarehouseNames[data.Warehouse],
 		coefLimit,
-		data.SupplyType,
+		constmsg.SupplyTypes[data.SupplyType],
 		constmsg.BotCommands[comName],
 	), nil
 }

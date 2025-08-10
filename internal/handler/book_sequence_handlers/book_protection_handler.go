@@ -34,7 +34,7 @@ func (h *BookProtectionHandler) Question(ctx context.Context, update tgbotapi.Up
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
-	msg, err = keyboard.DrawBookProtectKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawBookProtectKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return dto.PrevCommandInfo{}, errors.Wrap(err, " keyboard.DrawBookProtectKeyboard")
 	}

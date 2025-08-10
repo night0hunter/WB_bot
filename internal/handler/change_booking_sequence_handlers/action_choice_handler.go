@@ -1,4 +1,4 @@
-package changeHandler
+package changeBookingHandler
 
 import (
 	"context"
@@ -13,10 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+func (h *ActionChoiceBookingHandler) Question(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	var err error
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Выберите действие")
-	msg, err = keyboard.DrawActionChoiceKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawActionChoiceKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "keyboard.DrawActionChoiceKeyboard")
 	}
@@ -31,7 +31,7 @@ func (h *ActionChoiceHandler) Question(ctx context.Context, update tgbotapi.Upda
 	return tmpData, nil
 }
 
-func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
+func (h *ActionChoiceBookingHandler) Answer(ctx context.Context, update tgbotapi.Update, tmpData dto.PrevCommandInfo) (dto.PrevCommandInfo, error) {
 	if update.Message != nil {
 		return tmpData, &myError.MyError{
 			ErrType: myError.ActionChoiceError,
@@ -39,7 +39,7 @@ func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update
 		}
 	}
 
-	data, err := utils.Unmarshal[dto.ChangeStatusInfo](tmpData.Info)
+	data, err := utils.Unmarshal[dto.ChangeBookingStatusInfo](tmpData.Info)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "Unmarshal")
 	}
@@ -52,22 +52,22 @@ func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update
 
 	switch buttonData.Value {
 	case 1:
-		err = h.service.ChangeStatusService(ctx, update.CallbackQuery.Message.Chat.ID, data.TrackingID)
+		err = h.service.ChangeBookingStatusService(ctx, data.BookingID)
 		if err != nil {
 			return tmpData, errors.Wrap(err, "service.ChangeStatusService")
 		}
 
-		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Статус отслеживания успешно изменён")
+		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Статус автобронирования успешно изменён")
 		if _, err = h.bot.Send(msg); err != nil {
 			return tmpData, errors.Wrap(err, "bot.Send")
 		}
 	case 2:
-		err = h.service.DeleteTrackingService(ctx, update.CallbackQuery.Message.Chat.ID, data.TrackingID)
+		err = h.service.DeleteBookingService(ctx, data.BookingID)
 		if err != nil {
 			return tmpData, errors.Wrap(err, "service.DeleteTrackingService")
 		}
 
-		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Отслеживание успешно удалено")
+		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Автобронирование успешно удалено")
 		if _, err = h.bot.Send(msg); err != nil {
 			return tmpData, errors.Wrap(err, "bot.Send")
 		}
@@ -78,6 +78,6 @@ func (h *ActionChoiceHandler) Answer(ctx context.Context, update tgbotapi.Update
 	return tmpData, nil
 }
 
-func (h *ActionChoiceHandler) GetCommandName() enum.CommandSequence {
+func (h *ActionChoiceBookingHandler) GetCommandName() enum.CommandSequence {
 	return h.commandName
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func DrawActionChoiceKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (tgbotapi.MessageConfig, error) {
+func DrawActionChoiceKeyboard(msg tgbotapi.MessageConfig, data []byte) (tgbotapi.MessageConfig, error) {
 	tmpMarkup, err := GenerateKeyboard([]dto.Button{
 		{
 			Data: dto.ButtonData{

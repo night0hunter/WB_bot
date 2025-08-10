@@ -1,4 +1,4 @@
-package changeHandler
+package changeBookingHandler
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func (h *SaveStatusHandler) Question(ctx context.Context, update tgbotapi.Update
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Вы уже начинали заполнение, выберите действие")
 	}
 
-	msg, err = keyboard.DrawSaveStatusKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawSaveStatusKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCancelKeyboard")
 	}

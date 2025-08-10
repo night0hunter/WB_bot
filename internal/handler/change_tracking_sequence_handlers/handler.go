@@ -1,4 +1,4 @@
-package changeHandler
+package changeTrackingHandler
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 type Service interface {
 	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
-	DeleteTrackingService(ctx context.Context, chatID int64, trackingID int64) error
-	ChangeStatusService(ctx context.Context, chatID, trackingID int64) error
+	DeleteTrackingService(ctx context.Context, trackingID int64) error
+	ChangeStatusService(ctx context.Context, trackingID int64) error
 }
 
 type ActionChoiceHandler struct {
@@ -31,7 +31,7 @@ func New(bot *tgbotapi.BotAPI, svc Service) map[enum.CommandSequence]struct {
 		Current model.HandlerStruct
 		Next    model.HandlerStruct
 	}{
-		enum.BotCommandNameTypeChange: {
+		enum.BotCommandNameTypeChangeTracking: {
 			Prev:    nil,
 			Current: nil,
 			Next:    &TrackingChoiceHandler{bot: bot, service: svc, commandName: enum.BotCommandNameTypeTracking},

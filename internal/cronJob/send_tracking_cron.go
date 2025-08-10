@@ -7,15 +7,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SendTrackingsCronService interface {
+type SendTrackingsCronHandler interface {
 	TrackingCron(ctx context.Context) error
 }
 
 type SendTrackingsCron struct {
-	handler SendTrackingsCronService
+	handler SendTrackingsCronHandler
 }
 
-func NewSendTrackingCron(handler SendTrackingsCronService) *SendTrackingsCron {
+func NewSendTrackingCron(handler SendTrackingsCronHandler) *SendTrackingsCron {
 	return &SendTrackingsCron{
 		handler: handler,
 	}

@@ -44,7 +44,7 @@ func (h *DraftIdHandler) Question(ctx context.Context, update tgbotapi.Update, t
 		msg = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 	}
 
-	msg, err = keyboard.DrawBackKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawBackKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCancelKeyboard")
 	}

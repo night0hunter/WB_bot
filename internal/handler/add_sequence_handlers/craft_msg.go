@@ -22,7 +22,7 @@ func CraftMessage(prevCommand dto.PrevCommandInfo, comName enum.CommandSequence)
 			data.FromDate.Format(dto.TimeFormat),
 			data.ToDate.Format(dto.TimeFormat),
 			constmsg.WarehouseNames[data.Warehouse],
-			data.SupplyType,
+			constmsg.SupplyTypes[data.SupplyType],
 			constmsg.BotCommands[comName],
 		), nil
 	}
@@ -32,8 +32,8 @@ func CraftMessage(prevCommand dto.PrevCommandInfo, comName enum.CommandSequence)
 		data.FromDate.Format(dto.TimeFormat),
 		data.ToDate.Format(dto.TimeFormat),
 		constmsg.WarehouseNames[data.Warehouse],
-		data.CoeffLimit,
-		data.SupplyType,
+		*data.CoeffLimit,
+		constmsg.SupplyTypes[data.SupplyType],
 		constmsg.BotCommands[comName],
 	), nil
 }

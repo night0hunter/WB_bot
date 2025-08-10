@@ -112,7 +112,7 @@ func (pg *Postgres) InsertTracking(ctx context.Context, params dto.WarehouseData
 		"ToDate":       params.ToDate,
 		"Warehouse":    params.Warehouse,
 		"CoeffLimit":   params.CoeffLimit,
-		"SupplyType":   params.SupplyType,
+		"SupplyType":   int(params.SupplyType),
 		"TrackingDate": time.Now().Add(-time.Minute * 5),
 	}
 
@@ -124,10 +124,9 @@ func (pg *Postgres) InsertTracking(ctx context.Context, params dto.WarehouseData
 	return nil
 }
 
-func (pg *Postgres) SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error) {
-	query := `SELECT is_active FROM supplies WHERE chat_id=(@ChatID) AND id=(@TrackingID)`
+func (pg *Postgres) SelectTrackingStatus(ctx context.Context, trackingID int64) (bool, error) {
+	query := `SELECT is_active FROM supplies WHERE id=(@TrackingID)`
 	args := pgx.NamedArgs{
-		"ChatID":     chatID,
 		"TrackingID": trackingID,
 	}
 
@@ -143,7 +142,7 @@ func (pg *Postgres) SelectTrackingStatus(ctx context.Context, chatID int64, trac
 	return status, nil
 }
 
-func (pg *Postgres) ChangeTrackingStatus(ctx context.Context, trackingID int64, isActive bool) error {
+func (pg *Postgres) UpdateTrackingStatus(ctx context.Context, trackingID int64, isActive bool) error {
 	query := `UPDATE supplies SET is_active=(@IsActive) WHERE id=(@TrackingID)`
 	args := pgx.NamedArgs{
 		"IsActive":   !isActive,
@@ -172,7 +171,7 @@ func (pg *Postgres) DeleteTracking(ctx context.Context, trackingID int64) error 
 	return nil
 }
 
-func (pg *Postgres) JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error) {
+func (pg *Postgres) JobSelect(ctx context.Context, dateTo time.Time) ([]dto.WarehouseData, error) {
 	query := `
 		SELECT chat_id,
 				from_date,
@@ -191,7 +190,7 @@ func (pg *Postgres) JobSelect(ctx context.Context, date time.Time) ([]dto.Wareho
 	`
 	args := pgx.NamedArgs{
 		"DateFrom": time.Now(),
-		"DateTo":   date,
+		"DateTo":   dateTo,
 	}
 
 	rows, err := pg.db.Query(ctx, query, args)
@@ -233,37 +232,6 @@ func (pg *Postgres) UpdateSendingTime(ctx context.Context, date time.Time, id in
 	_, err := pg.db.Exec(ctx, query, args)
 	if err != nil {
 		return errors.Wrap(err, "UpdateSendingDate")
-	}
-
-	return nil
-}
-
-func (pg *Postgres) InsertBooking(ctx context.Context, params dto.BookingData) error {
-	query := `INSERT INTO bookings (
-					chat_id,
-					from_date,
-					to_date,
-					draft_id,
-					protection,
-					warehouse,
-					coeff_limit,
-					supply_type
-				)
-  			  VALUES (@ChatID, @FromDate, @ToDate, @DraftID, @Protection, @Warehouse, @CoeffLimit, @SupplyType)`
-	args := pgx.NamedArgs{
-		"ChatID":     params.ChatID,
-		"FromDate":   params.FromDate,
-		"ToDate":     params.ToDate,
-		"DraftID":    params.DraftID,
-		"Protection": params.Protection,
-		"Warehouse":  params.Warehouse,
-		"CoeffLimit": params.CoeffLimit,
-		"SupplyType": params.SupplyType,
-	}
-
-	_, err := pg.db.Exec(ctx, query, args)
-	if err != nil {
-		return errors.Wrap(err, "unable to insert row")
 	}
 
 	return nil

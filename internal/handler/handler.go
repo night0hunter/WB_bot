@@ -11,24 +11,27 @@ import (
 	myError "wb_bot/internal/error"
 	addHandler "wb_bot/internal/handler/add_sequence_handlers"
 	bookHandler "wb_bot/internal/handler/book_sequence_handlers"
-	changeHandler "wb_bot/internal/handler/change_sequence_handlers"
+	changeBookingHandler "wb_bot/internal/handler/change_booking_sequence_handlers"
+	changeTrackingHandler "wb_bot/internal/handler/change_tracking_sequence_handlers"
 	"wb_bot/internal/model"
-	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
 	"github.com/pkg/errors"
 )
 
 type Service interface {
-	DeleteTrackingService(ctx context.Context, chatID int64, trackingID int64) error
-	ChangeStatusService(ctx context.Context, chatID, trackingID int64) error
+	DeleteTrackingService(ctx context.Context, trackingID int64) error
+	DeleteBookingService(ctx context.Context, trackingID int64) error
+	ChangeStatusService(ctx context.Context, trackingID int64) error
+	ChangeBookingStatusService(ctx context.Context, trackingID int64) error
 	BotSlashCommandTypeHelpService(ctx context.Context, chatID int64) string
-	BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error)
+	BotSlashCommandTypeCheckTrackingsService(ctx context.Context, chatID int64) ([]string, error)
+	BotSlashCommandTypeCheckBookingsService(ctx context.Context, chatID int64) ([]string, error)
+	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
+	BotSlashCommandTypeChangeBooking(ctx context.Context, chatID int64) ([]dto.BookingData, error)
 	BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error)
 	BotAnswerInputCoeffLimitService(ctx context.Context, chatID int64, coeffLimit string) (int, error)
-	BotSlashCommandTypeChange(ctx context.Context, chatID int64) ([]dto.WarehouseData, error)
-	GetTrackings(ctx context.Context) ([]dto.MergedResp, error)
-	KeepSendingTime(ctx context.Context, tracking dto.MergedResp) error
 
 	AddSequenceEndService(ctx context.Context, chatID int64, data []byte) error
 	BookSequenceEndService(ctx context.Context, chatID int64, data []byte) error
@@ -37,6 +40,10 @@ type Service interface {
 	InsertState(ctx context.Context, chatID int64, prevCommand dto.PrevCommandInfo) error
 	UpdateState(ctx context.Context, chatID int64, prevCommand dto.PrevCommandInfo) error
 	DeleteState(ctx context.Context, chatID int64) error
+
+	BookDraftCron(ctx context.Context) (int64, error)
+	GetTrackings(ctx context.Context) ([]dto.MergedResp, error)
+	KeepSendingTime(ctx context.Context, tracking dto.MergedResp) error
 }
 
 // var prevCommands = map[int64]dto.PrevCommandInfo{}
@@ -59,8 +66,9 @@ func New(bot *tgbotapi.BotAPI, svc Service) *handler {
 	}{}
 
 	handlers[enum.Add] = addHandler.New(bot, svc)
-	handlers[enum.Change] = changeHandler.New(bot, svc)
+	handlers[enum.ChangeTracking] = changeTrackingHandler.New(bot, svc)
 	handlers[enum.Booking] = bookHandler.New(bot, svc)
+	handlers[enum.ChangeBooking] = changeBookingHandler.New(bot, svc)
 
 	return &handler{bot: bot, service: svc, handlers: handlers}
 }
@@ -119,26 +127,111 @@ func (h *handler) messageHandler(ctx context.Context, update tgbotapi.Update) er
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeAddHandler")
 		}
-	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeChange]:
-		err := h.BotSlashCommandTypeChangeHandler(ctx, update)
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeChangeTracking]:
+		err := h.BotSlashCommandTypeChangeTrackingHandler(ctx, update)
 		if err != nil {
-			return errors.Wrap(err, "BotSlashCommandTypeChangeHandler")
+			return errors.Wrap(err, "BotSlashCommandTypeChangeTrackingHandler")
 		}
-	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeCheck]:
-		err := h.BotSlashCommandTypeCheckHandler(ctx, update)
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeCheckTrackings]:
+		err := h.BotSlashCommandTypeCheckTrackingsHandler(ctx, update)
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
 		}
 	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeBook]:
 		err := h.BotSlashCommandTypeBookHandler(ctx, update)
 		if err != nil {
-			return errors.Wrap(err, "BotSlashCommandTypeCheckHandler")
+			return errors.Wrap(err, "BotSlashCommandTypeBookHandler")
+		}
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeChangeBooking]:
+		err := h.BotSlashCommandTypeChangeBookingHandler(ctx, update)
+		if err != nil {
+			return errors.Wrap(err, "BotSlashCommandTypeChangeBookingHandler")
+		}
+	case constmsg.BotSlashCommands[enum.BotSlashCommandTypeCheckBookings]:
+		err := h.BotSlashCommandTypeCheckBookingsHandler(ctx, update)
+		if err != nil {
+			return errors.Wrap(err, "BotSlashCommandTypeChangeBookingHandler")
 		}
 	default:
 		err := h.BotSlashCommandTypeDefaultHandler(ctx, update)
 		if err != nil {
 			return errors.Wrap(err, "BotSlashCommandTypeDefaultHandler")
 		}
+	}
+
+	return nil
+}
+
+func (h *handler) BotSlashCommandTypeChangeBookingHandler(ctx context.Context, update tgbotapi.Update) error {
+	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
+	_, err := h.bot.Send(deleteMsg)
+	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
+		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+	}
+
+	state, err := h.service.SelectState(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.SelectState")
+	}
+
+	if state.Info != nil {
+		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, state.MessageID)
+		_, err := h.bot.Send(deleteMsg)
+		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
+			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		}
+	}
+
+	if state.Info != nil && state.SequenceName == enum.ChangeBooking {
+		if state.CommandName != enum.BotCommandNameTypeSaveStatus {
+			// state.CommandName = SequenceToFirstCommand[state.SequenceName]
+			if h.handlers[state.SequenceName][state.CommandName].Prev != nil {
+				state.CommandName = h.handlers[state.SequenceName][state.CommandName].Prev.GetCommandName()
+			}
+		}
+
+		prevCommand, err := h.handlers[state.SequenceName][enum.BotCommandNameTypeSaveStatus].Current.Question(ctx, update, state)
+		if err != nil {
+			return errors.Wrap(err, "handlers[state.SequenceName][enum.BotCommandNameTypeSaveStatus].Current.Question")
+		}
+
+		err = h.service.UpdateState(ctx, update.Message.Chat.ID, dto.PrevCommandInfo{
+			SequenceName: state.SequenceName,
+			CommandName:  enum.BotCommandNameTypeSaveStatus,
+			MessageID:    prevCommand.MessageID,
+			Info:         prevCommand.Info,
+		})
+		if err != nil {
+			return errors.Wrap(err, "service.InsertState")
+		}
+
+		return nil
+	}
+
+	err = h.service.DeleteState(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.DeleteState")
+	}
+
+	prevCommand, err := h.handlers[enum.ChangeBooking][model.SequenceToFirstCommand[enum.ChangeBooking]].Next.Question(ctx, update, dto.PrevCommandInfo{})
+	if err != nil {
+		return errors.Wrap(err, "handlers[enum.BotCommandNameTypeInputDate].Value.Question")
+	}
+
+	jsonData, err := json.Marshal(prevCommand.Info)
+	if err != nil {
+		return errors.Wrap(err, "json.Marshall")
+	}
+
+	err = h.service.InsertState(ctx, update.Message.Chat.ID, dto.PrevCommandInfo{
+		SequenceName: enum.ChangeBooking,
+		CommandName:  enum.BotCommandNameTypeTracking,
+		MessageID:    prevCommand.MessageID,
+		Info:         jsonData,
+		KeyboardInfo: prevCommand.KeyboardInfo,
+	})
+	if err != nil {
+		return errors.Wrap(err, "service.InsertState")
 	}
 
 	return nil
@@ -225,8 +318,8 @@ func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbo
 	return nil
 }
 
-func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tgbotapi.Update) error {
-	whs, err := h.service.BotSlashCommandTypeCheckService(ctx, update.Message.Chat.ID)
+func (h *handler) BotSlashCommandTypeCheckTrackingsHandler(ctx context.Context, update tgbotapi.Update) error {
+	whs, err := h.service.BotSlashCommandTypeCheckTrackingsService(ctx, update.Message.Chat.ID)
 	if err != nil {
 		return errors.Wrap(err, "service.BotSlashCommandTypeCheck")
 	}
@@ -255,7 +348,37 @@ func (h *handler) BotSlashCommandTypeCheckHandler(ctx context.Context, update tg
 	return nil
 }
 
-func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update tgbotapi.Update) error {
+func (h *handler) BotSlashCommandTypeCheckBookingsHandler(ctx context.Context, update tgbotapi.Update) error {
+	whs, err := h.service.BotSlashCommandTypeCheckBookingsService(ctx, update.Message.Chat.ID)
+	if err != nil {
+		return errors.Wrap(err, "service.BotSlashCommandTypeCheck")
+	}
+
+	if whs == nil {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент У вас нет автоброни, чтобы добавить, используйте %s", constmsg.BotSlashCommands[enum.BotSlashCommandTypeBook]))
+		if _, err := h.bot.Send(msg); err != nil {
+			return errors.Wrap(err, "bot.Send")
+		}
+
+		return nil
+	}
+
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Список отслеживаемых складов:")
+	if _, err := h.bot.Send(msg); err != nil {
+		errors.Wrap(err, "bot.Send")
+	}
+
+	for _, wh := range whs {
+		msg = tgbotapi.NewMessage(update.Message.Chat.ID, wh)
+		if _, err := h.bot.Send(msg); err != nil {
+			errors.Wrap(err, "bot.Send")
+		}
+	}
+
+	return nil
+}
+
+func (h *handler) BotSlashCommandTypeChangeTrackingHandler(ctx context.Context, update tgbotapi.Update) error {
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
@@ -275,7 +398,7 @@ func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update t
 		}
 	}
 
-	if state.Info != nil && state.SequenceName == enum.Change {
+	if state.Info != nil && state.SequenceName == enum.ChangeTracking {
 		if state.CommandName != enum.BotCommandNameTypeSaveStatus {
 			// state.CommandName = SequenceToFirstCommand[state.SequenceName]
 			if h.handlers[state.SequenceName][state.CommandName].Prev != nil {
@@ -306,7 +429,7 @@ func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update t
 		return errors.Wrap(err, "service.DeleteState")
 	}
 
-	prevCommand, err := h.handlers[enum.Change][model.SequenceToFirstCommand[enum.Change]].Next.Question(ctx, update, dto.PrevCommandInfo{})
+	prevCommand, err := h.handlers[enum.ChangeTracking][model.SequenceToFirstCommand[enum.ChangeTracking]].Next.Question(ctx, update, dto.PrevCommandInfo{})
 	if err != nil {
 		return errors.Wrap(err, "handlers[enum.BotCommandNameTypeInputDate].Value.Question")
 	}
@@ -317,7 +440,7 @@ func (h *handler) BotSlashCommandTypeChangeHandler(ctx context.Context, update t
 	}
 
 	err = h.service.InsertState(ctx, update.Message.Chat.ID, dto.PrevCommandInfo{
-		SequenceName: enum.Change,
+		SequenceName: enum.ChangeTracking,
 		CommandName:  enum.BotCommandNameTypeTracking,
 		MessageID:    prevCommand.MessageID,
 		Info:         jsonData,
@@ -432,20 +555,8 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 				fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
 			}
 
-			var whs []dto.WarehouseData
-			if prevCommand.KeyboardInfo != nil {
-				whs, err = utils.Unmarshal[[]dto.WarehouseData](prevCommand.KeyboardInfo)
-				if err != nil {
-					return errors.Wrap(err, "Unmarshal")
-				}
-			}
-
-			keyboardInfo := dto.KeyboardData{
-				Warehouses: whs,
-			}
-
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, constmsg.MatchErrorType[myerr.GetErrorType()])
-			msg, err = model.CommandToKeyboard[prevCommand.CommandName](msg, keyboardInfo)
+			msg, err = model.CommandToKeyboard[prevCommand.CommandName](msg, prevCommand.KeyboardInfo)
 			if err != nil {
 				return errors.Wrap(err, "model.CommandToKeyboard")
 			}
@@ -596,7 +707,7 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update) err
 			if _, err = h.bot.Send(msg); err != nil {
 				return errors.Wrap(err, "bot.Send")
 			}
-		case enum.Change:
+		case enum.ChangeTracking:
 		default:
 		}
 

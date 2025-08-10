@@ -1,4 +1,4 @@
-package changeHandler
+package changeBookingHandler
 
 import "wb_bot/internal/enum"
 

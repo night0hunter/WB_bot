@@ -3,8 +3,6 @@ package addHandler
 import (
 	"context"
 	"encoding/json"
-	"strconv"
-	constmsg "wb_bot/internal/const_message"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
@@ -38,7 +36,7 @@ func (h *SupplyTypeHandler) Question(ctx context.Context, update tgbotapi.Update
 	}
 
 	// msg := tgbotapi.NewMessage(update.Message.Chat.ID, BotCommands[enum.BotCommandNameTypeInputWarehouse])
-	msg, err = keyboard.DrawSupplyKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawSupplyKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return tmpData, errors.Wrap(err, "keyboard.DrawSupplyKeyboard")
 	}
@@ -60,7 +58,7 @@ func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 	}
 
 	if update.Message != nil {
-		data.SupplyType = ""
+		data.SupplyType = 0
 
 		return tmpData, &myError.MyError{
 			ErrType: myError.SupplyTypeError,
@@ -74,7 +72,7 @@ func (h *SupplyTypeHandler) Answer(ctx context.Context, update tgbotapi.Update, 
 		return tmpData, errors.Wrap(err, "json.Unmarshal")
 	}
 
-	data.SupplyType = constmsg.SupplyTypes[strconv.Itoa(buttonData.Value)]
+	data.SupplyType = enum.SupplyType(buttonData.Value)
 
 	json, err := utils.Marshal(data)
 	if err != nil {

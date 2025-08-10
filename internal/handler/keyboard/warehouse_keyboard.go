@@ -7,7 +7,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func DrawWarehouseKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (tgbotapi.MessageConfig, error) {
+func DrawWarehouseKeyboard(msg tgbotapi.MessageConfig, data []byte) (tgbotapi.MessageConfig, error) {
 	tmpMarkup, err := GenerateKeyboard([]dto.Button{
 		{
 			Data: dto.ButtonData{
@@ -89,7 +89,7 @@ func DrawWarehouseKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (t
 		{
 			Data: dto.ButtonData{
 				Type:  enum.ButtonTypeWarehouse,
-				Value: 218644, // find id
+				Value: 2737, // find id
 			},
 			Text: "Санкт-Петербург Уткина Заводь",
 		},
@@ -106,6 +106,13 @@ func DrawWarehouseKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (t
 				Value: 686,
 			},
 			Text: "Новосибирск",
+		},
+		{
+			Data: dto.ButtonData{
+				Type:  enum.ButtonTypeWarehouse,
+				Value: 301808,
+			},
+			Text: "Воронеж",
 		},
 		{
 			Data: dto.ButtonData{

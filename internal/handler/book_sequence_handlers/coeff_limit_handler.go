@@ -30,7 +30,7 @@ func (h *CoeffLimitHandler) Question(ctx context.Context, update tgbotapi.Update
 
 	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
 
-	msg, err = keyboard.DrawCoeffKeyboard(msg, dto.KeyboardData{})
+	msg, err = keyboard.DrawCoeffKeyboard(msg, tmpData.KeyboardInfo)
 	if err != nil {
 		return dto.PrevCommandInfo{}, errors.Wrap(err, "keyboard.DrawCoeffKeyboard")
 	}

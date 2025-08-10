@@ -2,7 +2,7 @@ package constmsg
 
 import "wb_bot/internal/enum"
 
-var SupplyTypes = map[string]string{
+var SupplyTypes = map[enum.SupplyType]string{
 	enum.Box:        "Короба",
 	enum.Monopallet: "Монопаллеты",
 	enum.SuperSafe:  "Суперсейф",
@@ -20,15 +20,8 @@ var WarehouseNames = map[int]string{
 	117501: "Подольск",
 	1733:   "Екатеринбург - Испытателей 14г",
 	218644: "СЦ Хабаровск",
-	// : "Санкт-Петербург Уткина Заводь",
+	2737:   "Санкт-Петербург Уткина Заводь",
 	206236: "Белые Столбы",
 	686:    "Новосибирск",
-}
-
-var Coefficients = map[int]string{
-	0:  "",
-	-2: "0",
-	1:  "1",
-	2:  "2",
-	3:  "3",
+	301808: "Воронеж",
 }

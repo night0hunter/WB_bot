@@ -35,13 +35,18 @@ type WarehouseData struct {
 	ToDate      time.Time
 	Warehouse   int
 	CoeffLimit  *int
-	SupplyType  string
+	SupplyType  enum.SupplyType
 	IsActive    bool
 }
 
-type ChangeStatusInfo struct {
+type ChangeTrackingStatusInfo struct {
 	TrackingID int64
 	Choice     int
+}
+
+type ChangeBookingStatusInfo struct {
+	BookingID int64
+	Choice    int
 }
 
 type BookingData struct {
@@ -53,7 +58,8 @@ type BookingData struct {
 	Protection *int
 	Warehouse  int
 	CoeffLimit *int
-	SupplyType string
+	SupplyType enum.SupplyType
+	IsActive   bool
 }
 
 type TrackingDate struct {
@@ -64,10 +70,6 @@ type TrackingDate struct {
 type TrackingStatus struct {
 	UserID int64
 	Status int
-}
-
-type KeyboardData struct {
-	Warehouses []WarehouseData
 }
 
 type MergedResp struct {

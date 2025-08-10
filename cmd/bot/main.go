@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"wb_bot/db"
+	wbadp "wb_bot/internal/adapter/wb-adp"
 	"wb_bot/internal/handler"
 	"wb_bot/internal/service"
 
@@ -52,7 +53,7 @@ func main() {
 
 	fmt.Printf("Bot has been started\n")
 
-	service := service.NewService(dbpool)
+	service := service.New(dbpool, &wbadp.Adapter{})
 
 	h := handler.New(bot, service)
 	// handler := handler.NewHandler(bot, service)

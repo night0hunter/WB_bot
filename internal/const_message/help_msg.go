@@ -6,19 +6,23 @@ import (
 )
 
 var BotSlashCommands = map[enum.BotSlashCommandType]string{
-	enum.BotSlashCommandTypeHelp:   "/help",
-	enum.BotSlashCommandTypeAdd:    "/add",
-	enum.BotSlashCommandTypeChange: "/change",
-	enum.BotSlashCommandTypeCheck:  "/check",
-	enum.BotSlashCommandTypeBook:   "/book",
+	enum.BotSlashCommandTypeHelp:           "/help",
+	enum.BotSlashCommandTypeAdd:            "/add",
+	enum.BotSlashCommandTypeChangeTracking: "/change_tracking",
+	enum.BotSlashCommandTypeCheckTrackings: "/trackings",
+	enum.BotSlashCommandTypeBook:           "/book",
+	enum.BotSlashCommandTypeChangeBooking:  "/change_booking",
+	enum.BotSlashCommandTypeCheckBookings:  "/bookings",
 }
 
 var BotSlashCommandsHelp = map[string]string{
-	BotSlashCommands[enum.BotSlashCommandTypeHelp]:   "Команда для вывода информации о доступных функциях",
-	BotSlashCommands[enum.BotSlashCommandTypeAdd]:    "Команда для добавления нового отслеживания",
-	BotSlashCommands[enum.BotSlashCommandTypeChange]: "Команда для изменения статуса/удаления отслеживания",
-	BotSlashCommands[enum.BotSlashCommandTypeCheck]:  "Команда для вывода всех текущих отслеживаний",
-	BotSlashCommands[enum.BotSlashCommandTypeBook]:   "Команда для добавления автобронирования",
+	BotSlashCommands[enum.BotSlashCommandTypeHelp]:           "Команда для вывода информации о доступных функциях",
+	BotSlashCommands[enum.BotSlashCommandTypeAdd]:            "Команда для добавления нового отслеживания",
+	BotSlashCommands[enum.BotSlashCommandTypeChangeTracking]: "Команда для изменения статуса/удаления отслеживания",
+	BotSlashCommands[enum.BotSlashCommandTypeCheckTrackings]: "Команда для вывода всех текущих отслеживаний",
+	BotSlashCommands[enum.BotSlashCommandTypeBook]:           "Команда для добавления автобронирования",
+	BotSlashCommands[enum.BotSlashCommandTypeChangeBooking]:  "Команда для изменения статуса/удаления автобронирования",
+	BotSlashCommands[enum.BotSlashCommandTypeCheckBookings]:  "Команда для вывода всех текущих автобронирований",
 }
 
 var MatchErrorType = map[myError.ErrorType]string{
@@ -30,6 +34,7 @@ var MatchErrorType = map[myError.ErrorType]string{
 	myError.ActionChoiceError:     "Выберите действие из списка",
 	myError.SaveStatusChoiceError: "Выберите действие из списка",
 	myError.BookingIdError:        "ID введён неверно, попробуйте ещё раз",
+	myError.PreorderIDLenError:    "Длина ответа > 1",
 }
 
 var BotCommands = map[enum.CommandSequence]string{

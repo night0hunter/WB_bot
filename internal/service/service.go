@@ -14,15 +14,21 @@ import (
 
 type Repository interface {
 	SelectQuery(ctx context.Context, ChatID int64) ([]dto.WarehouseData, error)
-	SelectTrackingStatus(ctx context.Context, chatID int64, trackingID int64) (bool, error)
+	SelectTrackingStatus(ctx context.Context, trackingID int64) (bool, error)
+	SelectBookingStatus(ctx context.Context, bookingID int64) (bool, error)
+	SelectBookings(ctx context.Context) ([]dto.BookingData, error)
+	SelectUserBookings(ctx context.Context, chatID int64) ([]dto.BookingData, error)
 
 	InsertTracking(ctx context.Context, params dto.WarehouseData) error
 	InsertBooking(ctx context.Context, params dto.BookingData) error
 
-	ChangeTrackingStatus(ctx context.Context, chatID int64, isActive bool) error
+	UpdateTrackingStatus(ctx context.Context, trackingID int64, isActive bool) error
+	UpdateBookingStatus(ctx context.Context, bookingID int64, isActive bool) error
 	DeleteTracking(ctx context.Context, trackingID int64) error
-	JobSelect(ctx context.Context, date time.Time) ([]dto.WarehouseData, error)
+	DeleteBooking(ctx context.Context, trackingID int64) error
+	JobSelect(ctx context.Context, dateTo time.Time) ([]dto.WarehouseData, error)
 	UpdateSendingTime(ctx context.Context, date time.Time, id int64) error
+	UpdatePreorderID(ctx context.Context, id int64, preorderID int) error
 
 	SelectState(ctx context.Context, id int64) (dto.PrevCommandInfo, error)
 	UpdateState(ctx context.Context, id int64, prevCommand dto.PrevCommandInfo) error
@@ -30,12 +36,21 @@ type Repository interface {
 	DeleteState(ctx context.Context, id int64) error
 }
 
-type Service struct {
-	Repository Repository
+type Adapter interface {
+	GetWarehouseGoodsV2(ctx context.Context, input dto.GetWarehouseGoodsV2Request, url string) (dto.GetWarehouseGoodsV2Response, error)
+	Create(ctx context.Context, input dto.GetCreateRequest, url string) (dto.GetCreateResponse, error)
 }
 
-func NewService(rep Repository) *Service {
-	return &Service{Repository: rep}
+type Service struct {
+	Repository Repository
+	Adapter    Adapter
+}
+
+func New(rep Repository, adp Adapter) *Service {
+	return &Service{
+		Repository: rep,
+		Adapter:    adp,
+	}
 }
 
 func (s *Service) BotAnswerInputDateService(ctx context.Context, chatID int64, date string) (dto.TrackingDate, error) {
@@ -59,7 +74,7 @@ func (s *Service) BotAnswerInputCoeffLimitService(ctx context.Context, chatID in
 	return parsedCoeff, nil
 }
 
-func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID int64) ([]string, error) {
+func (s *Service) BotSlashCommandTypeCheckTrackingsService(ctx context.Context, chatID int64) ([]string, error) {
 	var warehouseStrs []string
 
 	warehouses, err := s.Repository.SelectQuery(ctx, chatID)
@@ -71,12 +86,40 @@ func (s *Service) BotSlashCommandTypeCheckService(ctx context.Context, chatID in
 		warehouseStrs = append(
 			warehouseStrs,
 			fmt.Sprintf(
-				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%s и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
+				"Склад: %s\nДата отслеживания: %s-%s\nЛимит коэффициента: x%d и меньше\nТип поставки: %s\nАктивно/Неактивно: %s",
 				constmsg.WarehouseNames[int(wh.Warehouse)],
 				wh.FromDate.Format(dto.TimeFormat),
 				wh.ToDate.Format(dto.TimeFormat),
 				*wh.CoeffLimit,
-				wh.SupplyType,
+				constmsg.SupplyTypes[wh.SupplyType],
+				utils.BoolToActiveRU(wh.IsActive),
+			),
+		)
+	}
+
+	return warehouseStrs, nil
+}
+
+func (s *Service) BotSlashCommandTypeCheckBookingsService(ctx context.Context, chatID int64) ([]string, error) {
+	var warehouseStrs []string
+
+	bookings, err := s.Repository.SelectUserBookings(ctx, chatID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Repository.SelectQuery")
+	}
+
+	for _, wh := range bookings {
+		warehouseStrs = append(
+			warehouseStrs,
+			fmt.Sprintf(
+				"Лимит даты бронирования: %s-%s\nID черновика: %s\nЗащита от бронирования: %d\nСклад: %s\nЛимит коэффициента: %d\nТип поставки: %s\nАктивно/Неактивно: %s",
+				wh.FromDate.Format(dto.TimeFormat),
+				wh.ToDate.Format(dto.TimeFormat),
+				wh.DraftID,
+				*wh.Protection,
+				constmsg.WarehouseNames[wh.Warehouse],
+				*wh.CoeffLimit,
+				constmsg.SupplyTypes[wh.SupplyType],
 				utils.BoolToActiveRU(wh.IsActive),
 			),
 		)
@@ -104,13 +147,22 @@ func (s *Service) BotSlashCommandTypeChange(ctx context.Context, chatID int64) (
 	return warehouses, nil
 }
 
-func (s *Service) ChangeStatusService(ctx context.Context, chatID, trackingID int64) error {
-	status, err := s.Repository.SelectTrackingStatus(ctx, chatID, trackingID)
+func (s *Service) BotSlashCommandTypeChangeBooking(ctx context.Context, chatID int64) ([]dto.BookingData, error) {
+	bookings, err := s.Repository.SelectUserBookings(ctx, chatID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Repository.SelectUserBookings")
+	}
+
+	return bookings, nil
+}
+
+func (s *Service) ChangeStatusService(ctx context.Context, trackingID int64) error {
+	status, err := s.Repository.SelectTrackingStatus(ctx, trackingID)
 	if err != nil {
 		return errors.Wrap(err, "Repository.SelectTrackingStatus")
 	}
 
-	err = s.Repository.ChangeTrackingStatus(ctx, trackingID, status)
+	err = s.Repository.UpdateTrackingStatus(ctx, trackingID, status)
 	if err != nil {
 		return errors.Wrap(err, "Repository.ChangeTrackingStatus")
 	}
@@ -118,8 +170,31 @@ func (s *Service) ChangeStatusService(ctx context.Context, chatID, trackingID in
 	return nil
 }
 
-func (s *Service) DeleteTrackingService(ctx context.Context, chatID int64, trackingID int64) error {
+func (s *Service) ChangeBookingStatusService(ctx context.Context, bookingID int64) error {
+	status, err := s.Repository.SelectBookingStatus(ctx, bookingID)
+	if err != nil {
+		return errors.Wrap(err, "Repository.SelectTrackingStatus")
+	}
+
+	err = s.Repository.UpdateBookingStatus(ctx, bookingID, status)
+	if err != nil {
+		return errors.Wrap(err, "Repository.ChangeTrackingStatus")
+	}
+
+	return nil
+}
+
+func (s *Service) DeleteTrackingService(ctx context.Context, trackingID int64) error {
 	err := s.Repository.DeleteTracking(ctx, trackingID)
+	if err != nil {
+		return errors.Wrap(err, "Repository.DeleteTracking")
+	}
+
+	return nil
+}
+
+func (s *Service) DeleteBookingService(ctx context.Context, bookingID int64) error {
+	err := s.Repository.DeleteBooking(ctx, bookingID)
 	if err != nil {
 		return errors.Wrap(err, "Repository.DeleteTracking")
 	}

@@ -7,12 +7,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func DrawBookProtectKeyboard(msg tgbotapi.MessageConfig, data dto.KeyboardData) (tgbotapi.MessageConfig, error) {
+func DrawBookProtectKeyboard(msg tgbotapi.MessageConfig, data []byte) (tgbotapi.MessageConfig, error) {
 	tmpMarkup, err := GenerateKeyboard([]dto.Button{
 		{
 			Data: dto.ButtonData{
 				Type:  enum.ButtonTypeBookProtection,
-				Value: -2, // shit for constmsg.Coefficients map
+				Value: 0, // shit for constmsg.Coefficients map
 			},
 			Text: "0",
 		},

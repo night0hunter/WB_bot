@@ -8,7 +8,7 @@ import (
 )
 
 type arg interface {
-	dto.WarehouseData | dto.ChangeStatusInfo | []dto.WarehouseData | dto.BookingData
+	dto.WarehouseData | dto.ChangeTrackingStatusInfo | dto.ChangeBookingStatusInfo | []dto.WarehouseData | dto.BookingData | []dto.BookingData
 }
 
 func Marshal[T arg](data T) ([]byte, error) {

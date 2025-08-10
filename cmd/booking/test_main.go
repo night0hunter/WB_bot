@@ -4,29 +4,46 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"wb_bot/db"
 	wbadp "wb_bot/internal/adapter/wb-adp"
 	cronjob "wb_bot/internal/cronJob"
 	"wb_bot/internal/handler"
+	"wb_bot/internal/middleware"
 	"wb_bot/internal/service"
 	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/robfig/cron/v3"
+	"golang.org/x/net/publicsuffix"
 
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	jar, err := cookiejar.New(&cookiejar.Options{
+		PublicSuffixList: publicsuffix.List,
+	})
+	if err != nil {
+		log.Fatal(ctx, "cookiejar.New")
+	}
+
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("godotenv.Load: %s", err)
 	}
+
+	var (
+		cookie      = os.Getenv("COOKIE")
+		authorizeV3 = os.Getenv("AUTHORIZE_V3")
+	)
 
 	var (
 		host     = os.Getenv("HOST")
@@ -59,18 +76,32 @@ func main() {
 
 	fmt.Printf("Bot has been started\n")
 
-	service := service.New(dbpool, &wbadp.Adapter{})
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: middleware.Chain(
+			nil,
+			middleware.SetAccCookieMiddleware(cookie),
+			middleware.SetHeader(middleware.Authorizev3Header, authorizeV3),
+		),
+		Jar: jar,
+	}
+	// mockClient := &mock.MockClient{}
+
+	wbSupplyAdp := wbadp.New(
+		httpClient,
+		"https://seller-supply.wildberries.ru",
+	)
+
+	service := service.New(dbpool, wbSupplyAdp)
 	handler := handler.New(bot, service)
-	trackingCron := cronjob.NewSendTrackingCron(handler)
-	
-	
+	bookDraftCron := cronjob.NewBookDraftCron(handler)
 
 	c := cron.New(
 		cron.WithLocation(utils.MoscowLocation),
 		cron.WithParser(cron.NewParser(cron.Second|cron.Minute|cron.Hour|cron.Dom|cron.Month|cron.Dow)),
 	)
 
-	_, err = c.AddJob("0 * * * * *", trackingCron)
+	_, err = c.AddJob("0 * * * * *", bookDraftCron)
 	if err != nil {
 		fmt.Printf("c.AddJob: %s", err.Error())
 	}

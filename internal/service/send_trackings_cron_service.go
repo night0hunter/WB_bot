@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 	"time"
-	"wb_bot/internal/api"
+	api "wb_bot/internal/adapter/wb-api"
 	"wb_bot/internal/dto"
+	"wb_bot/internal/enum"
 	"wb_bot/internal/utils"
 
 	"github.com/pkg/errors"
@@ -41,7 +42,7 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 				continue
 			}
 
-			if tr.SupplyType != sortedResponse[tr.Warehouse][j].BoxTypeName {
+			if tr.SupplyType != enum.SupplyType(sortedResponse[tr.Warehouse][j].BoxTypeID) {
 				continue
 			}
 
