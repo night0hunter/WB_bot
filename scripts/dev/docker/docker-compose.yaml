@@ -1,0 +1,106 @@
+version: "3.9"
+services:
+  bot:
+    env_file:
+      - ./.env
+    build:
+      dockerfile: scripts/dev/docker/Dockerfile.bot
+      context: ../../../
+    container_name: "wb_bot_container"
+    environment:
+      HOST: ${HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - .:/app
+    networks:
+      - my_network
+    depends_on: 
+      - db
+  job:
+    env_file:
+      - ./.env
+    build:
+      dockerfile: scripts/dev/docker/Dockerfile.job
+      context: ../../../
+    container_name: "wb_jobs_container"
+    environment:
+      HOST: ${HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - .:/app
+    networks:
+      - my_network
+    depends_on: 
+      - db
+  booking:
+    env_file:
+      - ./.env
+    build:
+      dockerfile: scripts/dev/docker/Dockerfile.booking
+      context: ../../../
+    container_name: "wb_booking_container"
+    environment:
+      HOST: ${HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - .:/app
+    networks:
+      - my_network
+    depends_on: 
+      - db
+
+  db:
+    image: postgres:17.0
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    container_name: "postgres_container"
+    volumes:
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./docker-init:/docker-entrypoint-initdb.d
+      - db-data:/var/lib/postgresql/data
+    # command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    ports:
+      - "5433:5432"
+    networks:
+     - my_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wb_bot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+  
+  migration:
+    build:
+      dockerfile: scripts/dev/docker/Dockerfile.migration
+      context: ../../../
+    container_name: "wb_bot_db_migration"
+    environment:
+      DB_ADDR: ${HOST}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - my_network
+    depends_on: 
+      - db
+
+volumes:
+  db-data:
+
+networks:
+  my_network:

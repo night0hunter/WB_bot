@@ -31,9 +31,9 @@ func main() {
 	var (
 		host     = os.Getenv("HOST")
 		port     = os.Getenv("PORT")
-		user     = os.Getenv("USER")
-		password = os.Getenv("PASSWORD")
-		dbname   = os.Getenv("DBNAME")
+		user     = os.Getenv("POSTGRES_USER")
+		password = os.Getenv("POSTGRES_PASSWORD")
+		dbname   = os.Getenv("POSTGRES_DB")
 	)
 
 	var connString = fmt.Sprintf(
@@ -62,8 +62,6 @@ func main() {
 	service := service.New(dbpool, &wbadp.Adapter{})
 	handler := handler.New(bot, service)
 	trackingCron := cronjob.NewSendTrackingCron(handler)
-	
-	
 
 	c := cron.New(
 		cron.WithLocation(utils.MoscowLocation),
