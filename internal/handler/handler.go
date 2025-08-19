@@ -355,7 +355,9 @@ func (h *handler) BotSlashCommandTypeCheckBookingsHandler(ctx context.Context, u
 	}
 
 	if whs == nil {
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("На данный момент У вас нет автоброни, чтобы добавить, используйте %s", constmsg.BotSlashCommands[enum.BotSlashCommandTypeBook]))
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf(
+			"На данный момент У вас нет автоброни, чтобы добавить, используйте %s",
+			constmsg.BotSlashCommands[enum.BotSlashCommandTypeBook]))
 		if _, err := h.bot.Send(msg); err != nil {
 			return errors.Wrap(err, "bot.Send")
 		}

@@ -44,7 +44,6 @@ func (n *MockClient) DoFunc(req *http.Request) (*http.Response, error) {
 }
 
 func validateWhGoodsV2(req *http.Request) (*http.Response, error) {
-
 	data := dto.JSONRPCResponse{
 		ID:      "json-rpc_100",
 		JSONRPC: "2.0",

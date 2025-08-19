@@ -4,16 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/mock"
 
 	"github.com/pkg/errors"
+	"github.com/tebeka/selenium"
 )
 
 // Adapter - adapter for working with wb reports with account cookie
 type Adapter struct {
 	client  mock.HttpClient
+	driver  selenium.WebDriver
 	baseURL string
 }
 
@@ -140,4 +144,49 @@ func (a *Adapter) Create(ctx context.Context, input dto.GetCreateRequest, url st
 	result.IDs = rawResp.Result.IDs
 
 	return result, nil
+}
+
+func (a *Adapter) GetTrackingsList(ctx context.Context, url string) ([]dto.Response, error) {
+	reqUrl := a.baseURL + url
+
+	req, err := http.NewRequest(http.MethodGet, reqUrl, nil)
+	if err != nil {
+		fmt.Printf("http.NewRequest: %s", err.Error())
+	}
+
+	res, err := a.client.Do(req)
+	if err != nil {
+		return []dto.Response{}, errors.Wrap(err, "client.Do")
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return []dto.Response{}, errors.Errorf("unexpected status code: %d", res.StatusCode)
+	}
+
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+
+	body, readErr := io.ReadAll(res.Body)
+	if readErr != nil {
+		return []dto.Response{}, errors.Wrap(err, "io.ReadAll")
+	}
+
+	resp := []dto.Response{}
+
+	jsonErr := json.Unmarshal(body, &resp)
+	if jsonErr != nil {
+		return []dto.Response{}, errors.Wrap(err, "json.Unmarshal")
+	}
+
+	// fmt.Printf("HTTP: %s\n", res.Status)
+
+	var sortedResp []dto.Response
+	for _, wh := range resp {
+		if (wh.BoxTypeID == 2 || wh.BoxTypeID == 5) && wh.Coefficient != -1 {
+			sortedResp = append(sortedResp, wh)
+		}
+	}
+
+	return sortedResp, nil
 }

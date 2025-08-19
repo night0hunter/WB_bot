@@ -1,54 +1,42 @@
 package api
 
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"wb_bot/internal/dto"
+// func GetTrackingsList(ctx context.Context, client http.Client) ([]dto.Response, error) {
+// 	req, err := http.NewRequest(http.MethodGet, os.Getenv("REQ_URL"), nil)
+// 	if err != nil {
+// 		fmt.Printf("http.NewRequest: %s", err.Error())
+// 	}
 
-	"github.com/pkg/errors"
-)
+// 	req.Header.Add("Authorization", "Bearer"+os.Getenv("BEARER_TOKEN"))
 
-func GetTrackingsList(ctx context.Context, client http.Client) ([]dto.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, os.Getenv("REQ_URL"), nil)
-	if err != nil {
-		fmt.Printf("http.NewRequest: %s", err.Error())
-	}
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		return []dto.Response{}, errors.Wrap(err, "client.Do")
+// 	}
 
-	req.Header.Add("Authorization", "Bearer"+os.Getenv("BEARER_TOKEN"))
+// 	if res.Body != nil {
+// 		defer res.Body.Close()
+// 	}
 
-	res, err := client.Do(req)
-	if err != nil {
-		return []dto.Response{}, errors.Wrap(err, "client.Do")
-	}
+// 	body, readErr := io.ReadAll(res.Body)
+// 	if readErr != nil {
+// 		return []dto.Response{}, errors.Wrap(err, "io.ReadAll")
+// 	}
 
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
+// 	resp := []dto.Response{}
 
-	body, readErr := io.ReadAll(res.Body)
-	if readErr != nil {
-		return []dto.Response{}, errors.Wrap(err, "io.ReadAll")
-	}
+// 	jsonErr := json.Unmarshal(body, &resp)
+// 	if jsonErr != nil {
+// 		return []dto.Response{}, errors.Wrap(err, "json.Unmarshal")
+// 	}
 
-	resp := []dto.Response{}
+// 	// fmt.Printf("HTTP: %s\n", res.Status)
 
-	jsonErr := json.Unmarshal(body, &resp)
-	if jsonErr != nil {
-		return []dto.Response{}, errors.Wrap(err, "json.Unmarshal")
-	}
+// 	var sortedResp []dto.Response
+// 	for _, wh := range resp {
+// 		if (wh.BoxTypeID == 2 || wh.BoxTypeID == 5) && wh.Coefficient != -1 {
+// 			sortedResp = append(sortedResp, wh)
+// 		}
+// 	}
 
-	// fmt.Printf("HTTP: %s\n", res.Status)
-
-	var sortedResp []dto.Response
-	for _, wh := range resp {
-		if (wh.BoxTypeID == 2 || wh.BoxTypeID == 5) && wh.Coefficient != -1 {
-			sortedResp = append(sortedResp, wh)
-		}
-	}
-
-	return sortedResp, nil
-}
+// 	return sortedResp, nil
+// }

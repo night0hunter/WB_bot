@@ -37,6 +37,7 @@ type Repository interface {
 }
 
 type Adapter interface {
+	GetTrackingsList(ctx context.Context, url string) ([]dto.Response, error)
 	GetWarehouseGoodsV2(ctx context.Context, input dto.GetWarehouseGoodsV2Request, url string) (dto.GetWarehouseGoodsV2Response, error)
 	Create(ctx context.Context, input dto.GetCreateRequest, url string) (dto.GetCreateResponse, error)
 }

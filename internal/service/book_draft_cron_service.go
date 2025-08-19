@@ -7,10 +7,16 @@ import (
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	myError "wb_bot/internal/error"
+	logger "wb_bot/pkg/log"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
+
+var boxTypeMask = map[enum.SupplyType]int{
+	enum.Box:        4,
+	enum.Monopallet: 32,
+}
 
 func (s *Service) BookDraftCron(ctx context.Context) (int64, error) {
 	bookings, err := s.Repository.SelectBookings(ctx)
@@ -31,12 +37,16 @@ func (s *Service) BookDraftCron(ctx context.Context) (int64, error) {
 		for _, item := range resp.Items {
 			if item.HasError == true {
 				ok = false
+				logger.Debug(ctx, "item.HasError")
+
 				break
 			}
 
 			if booking.SupplyType == enum.Box {
 				if item.CanMix != true {
 					ok = false
+					logger.Debug(ctx, "item has different supply type")
+
 					break
 				}
 
@@ -46,14 +56,11 @@ func (s *Service) BookDraftCron(ctx context.Context) (int64, error) {
 			if booking.SupplyType == enum.Monopallet {
 				if item.CanMonopallet != true {
 					ok = false
+					logger.Debug(ctx, "item has different supply type")
+
 					break
 				}
 			}
-		}
-
-		var boxTypeMask = map[enum.SupplyType]int{
-			enum.Box:        4,
-			enum.Monopallet: 32,
 		}
 
 		if ok {
@@ -81,8 +88,6 @@ func (s *Service) BookDraftCron(ctx context.Context) (int64, error) {
 			}
 
 			fmt.Println("Draft created successfully")
-
-			// spew.Dump(resp)
 		}
 	}
 

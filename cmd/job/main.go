@@ -4,18 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"wb_bot/db"
 	wbadp "wb_bot/internal/adapter/wb-adp"
 	cronjob "wb_bot/internal/cronJob"
 	"wb_bot/internal/handler"
+	"wb_bot/internal/middleware"
 	"wb_bot/internal/service"
 	"wb_bot/internal/utils"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/robfig/cron/v3"
+	"golang.org/x/net/publicsuffix"
 
 	"github.com/joho/godotenv"
 )
@@ -26,6 +31,15 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("godotenv.Load: %s", err)
+	}
+
+	var bearer = os.Getenv("BEARER_TOKEN")
+
+	jar, err := cookiejar.New(&cookiejar.Options{
+		PublicSuffixList: publicsuffix.List,
+	})
+	if err != nil {
+		log.Fatal(ctx, "cookiejar.New")
 	}
 
 	var (
@@ -59,7 +73,22 @@ func main() {
 
 	fmt.Printf("Bot has been started\n")
 
-	service := service.New(dbpool, &wbadp.Adapter{})
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: middleware.Chain(
+			nil,
+			middleware.SetHeader(middleware.AuthorizationHeader, "Bearer "+bearer),
+		),
+		Jar: jar,
+	}
+	// mockClient := &mock.MockClient{}
+
+	wbSupplyAdp := wbadp.New(
+		httpClient,
+		"https://supplies-api.wildberries.ru",
+	)
+
+	service := service.New(dbpool, wbSupplyAdp)
 	handler := handler.New(bot, service)
 	trackingCron := cronjob.NewSendTrackingCron(handler)
 

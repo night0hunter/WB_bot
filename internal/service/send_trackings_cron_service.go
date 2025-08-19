@@ -2,9 +2,8 @@ package service
 
 import (
 	"context"
-	"net/http"
+	"os"
 	"time"
-	api "wb_bot/internal/adapter/wb-api"
 	"wb_bot/internal/dto"
 	"wb_bot/internal/enum"
 	"wb_bot/internal/utils"
@@ -16,7 +15,7 @@ func (s *Service) GetTrackings(ctx context.Context) ([]dto.MergedResp, error) {
 	var result []dto.MergedResp
 	var userTrackings []dto.WarehouseData
 
-	response, err := api.GetTrackingsList(ctx, http.Client{Timeout: time.Second * 2})
+	response, err := s.Adapter.GetTrackingsList(ctx, os.Getenv("SUPPLIES_URL"))
 	if err != nil {
 		return []dto.MergedResp{}, errors.Wrap(err, "api.GetTrackingsList")
 	}
