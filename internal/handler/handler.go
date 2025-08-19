@@ -14,8 +14,10 @@ import (
 	changeBookingHandler "wb_bot/internal/handler/change_booking_sequence_handlers"
 	changeTrackingHandler "wb_bot/internal/handler/change_tracking_sequence_handlers"
 	"wb_bot/internal/model"
+	logger "wb_bot/pkg/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"go.uber.org/zap"
 
 	"github.com/pkg/errors"
 )
@@ -166,7 +168,7 @@ func (h *handler) BotSlashCommandTypeChangeBookingHandler(ctx context.Context, u
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	state, err := h.service.SelectState(ctx, update.Message.Chat.ID)
@@ -178,7 +180,7 @@ func (h *handler) BotSlashCommandTypeChangeBookingHandler(ctx context.Context, u
 		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, state.MessageID)
 		_, err := h.bot.Send(deleteMsg)
 		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+			logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 		}
 	}
 
@@ -252,7 +254,7 @@ func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbo
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	state, err := h.service.SelectState(ctx, update.Message.Chat.ID)
@@ -264,7 +266,7 @@ func (h *handler) BotSlashCommandTypeAddHandler(ctx context.Context, update tgbo
 		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, state.MessageID)
 		_, err := h.bot.Send(deleteMsg)
 		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+			logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 		}
 	}
 
@@ -384,7 +386,7 @@ func (h *handler) BotSlashCommandTypeChangeTrackingHandler(ctx context.Context, 
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	state, err := h.service.SelectState(ctx, update.Message.Chat.ID)
@@ -396,7 +398,7 @@ func (h *handler) BotSlashCommandTypeChangeTrackingHandler(ctx context.Context, 
 		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, state.MessageID)
 		_, err := h.bot.Send(deleteMsg)
 		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+			logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 		}
 	}
 
@@ -459,7 +461,7 @@ func (h *handler) BotSlashCommandTypeBookHandler(ctx context.Context, update tgb
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err := h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	state, err := h.service.SelectState(ctx, update.Message.Chat.ID)
@@ -471,7 +473,7 @@ func (h *handler) BotSlashCommandTypeBookHandler(ctx context.Context, update tgb
 		deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, state.MessageID)
 		_, err := h.bot.Send(deleteMsg)
 		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+			logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 		}
 	}
 
@@ -548,13 +550,13 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 			deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 			_, err = h.bot.Send(deleteMsg)
 			if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-				fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+				logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 			}
 
 			deleteMsg = tgbotapi.NewDeleteMessage(update.Message.Chat.ID, prevCommand.MessageID)
 			_, err = h.bot.Send(deleteMsg)
 			if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-				fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+				logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 			}
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, constmsg.MatchErrorType[myerr.GetErrorType()])
@@ -589,13 +591,13 @@ func (h *handler) BotSlashCommandTypeDefaultHandler(ctx context.Context, update 
 	deleteMsg := tgbotapi.NewDeleteMessage(update.Message.Chat.ID, update.Message.MessageID)
 	_, err = h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	deleteMsg = tgbotapi.NewDeleteMessage(update.Message.Chat.ID, prevCommand.MessageID)
 	_, err = h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	prevCommand, err = h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Next.Question(ctx, update, prevCommand)
@@ -637,7 +639,7 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update) err
 		deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
 		_, err = h.bot.Send(deleteMsg)
 		if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-			fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+			logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 		}
 
 		if h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Prev == nil {
@@ -684,7 +686,7 @@ func (h *handler) ButtonHandler(ctx context.Context, update tgbotapi.Update) err
 	deleteMsg := tgbotapi.NewDeleteMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID)
 	_, err = h.bot.Send(deleteMsg)
 	if err != nil && !strings.Contains(err.Error(), "json: cannot unmarshal bool") {
-		fmt.Printf("bot.Send(deleteMsg): %s\n", err.Error())
+		logger.Debug(ctx, "bot.Send(deleteMsg)", zap.Error(err))
 	}
 
 	if h.handlers[prevCommand.SequenceName][prevCommand.CommandName].Next == nil {

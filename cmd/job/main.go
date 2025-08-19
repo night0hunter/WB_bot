@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 	"wb_bot/db"
@@ -17,9 +17,12 @@ import (
 	"wb_bot/internal/middleware"
 	"wb_bot/internal/service"
 	"wb_bot/internal/utils"
+	logger "wb_bot/pkg/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/net/publicsuffix"
 
 	"github.com/joho/godotenv"
@@ -30,8 +33,10 @@ func main() {
 	defer stop()
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("godotenv.Load: %s", err)
+		logger.FatalKV(ctx, "godotenv.Load", zap.Error(err))
 	}
+
+	logger.SetLevel(getLogLevel())
 
 	var bearer = os.Getenv("BEARER_TOKEN")
 
@@ -39,7 +44,7 @@ func main() {
 		PublicSuffixList: publicsuffix.List,
 	})
 	if err != nil {
-		log.Fatal(ctx, "cookiejar.New")
+		logger.FatalKV(ctx, "cookiejar.New", zap.Error(err))
 	}
 
 	var (
@@ -61,14 +66,14 @@ func main() {
 
 	dbpool, err := db.NewPG(ctx, connString)
 	if err != nil {
-		log.Fatalf("db.NewPG: %s", err)
+		logger.FatalKV(ctx, "db.NewPG", zap.Error(err))
 	}
 
 	fmt.Printf("Base has been started on port %s\n", port)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
 	if err != nil {
-		log.Fatalf("tgbotapi.NewBotAPI: %s", err)
+		logger.FatalKV(ctx, "tgbotapi.NewBotAPI", zap.Error(err))
 	}
 
 	fmt.Printf("Bot has been started\n")
@@ -99,7 +104,7 @@ func main() {
 
 	_, err = c.AddJob("0 * * * * *", trackingCron)
 	if err != nil {
-		fmt.Printf("c.AddJob: %s", err.Error())
+		logger.FatalKV(ctx, "trackingCron: AddJob", zap.Error(err))
 	}
 
 	c.Start()
@@ -110,4 +115,15 @@ func main() {
 	<-ctx.Done()
 
 	fmt.Println("\nShutdown signal received. Exiting...")
+}
+
+func getLogLevel() zapcore.Level {
+	v := os.Getenv("LOG_LEVEL")
+	if v == "" {
+		return zap.WarnLevel
+	}
+
+	parsed, _ := strconv.Atoi(v)
+
+	return zapcore.Level(parsed)
 }

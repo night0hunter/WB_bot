@@ -3,21 +3,29 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+	"strconv"
 	"wb_bot/db"
 	wbadp "wb_bot/internal/adapter/wb-adp"
 	"wb_bot/internal/handler"
 	"wb_bot/internal/service"
+	logger "wb_bot/pkg/log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("godotenv.Load: %s", err)
+		logger.FatalKV(ctx, "godotenv.Load", zap.Error(err))
 	}
+
+	logger.SetLevel(getLogLevel())
 
 	var (
 		host     = os.Getenv("HOST")
@@ -36,19 +44,16 @@ func main() {
 		dbname,
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	dbpool, err := db.NewPG(ctx, connString)
 	if err != nil {
-		log.Fatalf("db.NewPG: %s", err)
+		logger.FatalKV(ctx, "db.NewPG", zap.Error(err))
 	}
 
 	fmt.Printf("Database has been started on port %s\n", port)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
 	if err != nil {
-		log.Fatalf("tgbotapi.NewBotAPI: %s", err)
+		logger.FatalKV(ctx, "tgbotapi.NewBotAPI", zap.Error(err))
 	}
 
 	fmt.Printf("Bot has been started\n")
@@ -56,11 +61,19 @@ func main() {
 	service := service.New(dbpool, &wbadp.Adapter{})
 
 	h := handler.New(bot, service)
-	// handler := handler.NewHandler(bot, service)
-
 	err = h.Run(ctx)
-	// err = handler.Run(ctx)
 	if err != nil {
-		fmt.Printf("handler.Run: %s", err.Error())
+		logger.FatalKV(ctx, "handler.Run", zap.Error(err))
 	}
+}
+
+func getLogLevel() zapcore.Level {
+	v := os.Getenv("LOG_LEVEL")
+	if v == "" {
+		return zap.WarnLevel
+	}
+
+	parsed, _ := strconv.Atoi(v)
+
+	return zapcore.Level(parsed)
 }
